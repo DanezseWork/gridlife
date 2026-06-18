@@ -33,6 +33,11 @@ async function main() {
   });
 
   if (existing) {
+    if (process.env.NODE_ENV === 'production') {
+      console.log('Demo user already exists, skipping seed.');
+      return;
+    }
+
     await prisma.plannedOccurrence.deleteMany({
       where: { plannedTransaction: { userId: existing.id } },
     });

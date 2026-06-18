@@ -22,7 +22,9 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",
-    "prisma:seed": "tsx prisma/seed.ts"
+    "prisma:seed": "tsx prisma/seed.ts",
+    "prisma:seed:prod": "node dist/prisma/seed.js",
+    "deploy:prepare": "npm run prisma:migrate:deploy && npm run prisma:seed:prod"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

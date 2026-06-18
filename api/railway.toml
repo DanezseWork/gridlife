@@ -3,5 +3,5 @@ buildCommand = "npm run build"
 
 [deploy]
 startCommand = "npm run start:prod"
-preDeployCommand = "npm run prisma:migrate:deploy"
+preDeployCommand = "npm run deploy:prepare"
 healthcheckPath = "/health"
