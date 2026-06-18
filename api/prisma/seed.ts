@@ -59,8 +59,8 @@ async function main() {
       name: 'Demo User',
       settings: {
         create: {
-          baseColor: '#ffffff',
-          accentColor: '#00ffff',
+          baseColor: '#000000',
+          accentColor: '#ffffff',
           currency: 'PHP',
         },
       },

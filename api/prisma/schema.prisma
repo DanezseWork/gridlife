@@ -148,7 +148,7 @@ model UserSettings {
   id          String @id @default(uuid())
   userId      String @unique
   user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  baseColor   String @default("#ffffff")
-  accentColor String @default("#00ffff")
+  baseColor   String @default("#000000")
+  accentColor String @default("#ffffff")
   currency    String @default("PHP")
 }

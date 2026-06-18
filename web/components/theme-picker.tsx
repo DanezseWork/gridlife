@@ -46,7 +46,7 @@ export function ThemePicker({ compact = false, onChange }: ThemePickerProps) {
           Base color
         </h2>
         <div className="flex gap-2">
-          {(["#ffffff", "#000000"] as const).map((color) => (
+          {(["#000000", "#ffffff"] as const).map((color) => (
             <button
               key={color}
               type="button"

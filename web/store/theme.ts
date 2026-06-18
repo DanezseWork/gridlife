@@ -77,8 +77,8 @@ function applyCssVars(baseColor: string, accentColor: string) {
 export const useThemeStore = create<ThemeState>()(
   persist(
     (set) => ({
-      baseColor: "#ffffff",
-      accentColor: "#00ffff",
+      baseColor: "#000000",
+      accentColor: "#ffffff",
       setBaseColor: (baseColor) => {
         set((state) => {
           const accentColor = syncAccentForBaseChange(

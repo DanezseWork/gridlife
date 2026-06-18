@@ -19,8 +19,8 @@ export class SettingsService {
         },
         create: {
           userId,
-          baseColor: dto.baseColor ?? '#ffffff',
-          accentColor: dto.accentColor ?? '#00ffff',
+          baseColor: dto.baseColor ?? '#000000',
+          accentColor: dto.accentColor ?? '#ffffff',
           currency: dto.currency ?? 'PHP',
         },
       });

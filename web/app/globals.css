@@ -24,9 +24,9 @@
 }
 
 :root {
-  --color-base: #ffffff;
-  --color-inverse: #000000;
-  --color-accent: #00ffff;
+  --color-base: #000000;
+  --color-inverse: #ffffff;
+  --color-accent: #ffffff;
   --color-on-accent: #000000;
   --color-accent-glow: color-mix(in srgb, var(--color-accent) 40%, transparent);
   --color-accent-surface: color-mix(in srgb, var(--color-accent) 14%, transparent);
