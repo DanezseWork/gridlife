@@ -8,7 +8,11 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiWrappedCreatedResponse,
+  ApiWrappedOkResponse,
+} from '../common/swagger/api-response.helpers';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthUser } from '../common/types/auth-user';
 import {
@@ -29,11 +33,21 @@ export class TasksController {
   constructor(private readonly tasksService: TasksService) {}
 
   @Get()
+  @ApiOperation({ summary: 'List tasks for a date' })
+  @ApiWrappedOkResponse('Tasks for the given date', {
+    type: 'array',
+    items: { type: 'object' },
+  })
   findForDate(@CurrentUser() user: AuthUser, @Query() query: TaskDateQueryDto) {
     return this.tasksService.findForDate(user.id, query.date);
   }
 
   @Get('calendar')
+  @ApiOperation({ summary: 'Get monthly task calendar summary' })
+  @ApiWrappedOkResponse('Calendar summary for the month', {
+    type: 'array',
+    items: { type: 'object' },
+  })
   getCalendar(
     @CurrentUser() user: AuthUser,
     @Query() query: TaskCalendarQueryDto,
@@ -42,16 +56,25 @@ export class TasksController {
   }
 
   @Post()
+  @ApiOperation({ summary: 'Create a task' })
+  @ApiWrappedCreatedResponse('Created task')
   create(@CurrentUser() user: AuthUser, @Body() dto: CreateTaskDto) {
     return this.tasksService.create(user.id, dto);
   }
 
   @Post('reorder')
+  @ApiOperation({ summary: 'Reorder tasks for a date' })
+  @ApiWrappedOkResponse('Reordered tasks', {
+    type: 'array',
+    items: { type: 'object' },
+  })
   reorder(@CurrentUser() user: AuthUser, @Body() dto: ReorderTasksDto) {
     return this.tasksService.reorder(user.id, dto.date, dto.taskIds);
   }
 
   @Patch(':id')
+  @ApiOperation({ summary: 'Update a task' })
+  @ApiWrappedOkResponse('Updated task')
   update(
     @CurrentUser() user: AuthUser,
     @Param('id') id: string,
@@ -61,11 +84,15 @@ export class TasksController {
   }
 
   @Post(':id/toggle')
+  @ApiOperation({ summary: 'Toggle task completion' })
+  @ApiWrappedOkResponse('Updated task')
   toggle(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.tasksService.toggle(user.id, id);
   }
 
   @Post(':id/subtasks')
+  @ApiOperation({ summary: 'Add a subtask' })
+  @ApiWrappedCreatedResponse('Created subtask')
   createSubtask(
     @CurrentUser() user: AuthUser,
     @Param('id') id: string,
@@ -75,6 +102,8 @@ export class TasksController {
   }
 
   @Post(':id/subtasks/:subtaskId/toggle')
+  @ApiOperation({ summary: 'Toggle subtask completion' })
+  @ApiWrappedOkResponse('Updated subtask')
   toggleSubtask(
     @CurrentUser() user: AuthUser,
     @Param('id') id: string,
@@ -84,6 +113,8 @@ export class TasksController {
   }
 
   @Patch(':id/subtasks/:subtaskId')
+  @ApiOperation({ summary: 'Update a subtask title' })
+  @ApiWrappedOkResponse('Updated subtask')
   updateSubtask(
     @CurrentUser() user: AuthUser,
     @Param('id') id: string,
@@ -94,6 +125,8 @@ export class TasksController {
   }
 
   @Delete(':id/subtasks/:subtaskId')
+  @ApiOperation({ summary: 'Delete a subtask' })
+  @ApiWrappedOkResponse('Subtask deleted', { type: 'null', nullable: true })
   removeSubtask(
     @CurrentUser() user: AuthUser,
     @Param('id') id: string,
@@ -103,6 +136,8 @@ export class TasksController {
   }
 
   @Delete(':id')
+  @ApiOperation({ summary: 'Delete a task' })
+  @ApiWrappedOkResponse('Task deleted', { type: 'null', nullable: true })
   remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.tasksService.remove(user.id, id);
   }

@@ -1,5 +1,9 @@
 import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiWrappedCreatedResponse,
+  ApiWrappedOkResponse,
+} from '../common/swagger/api-response.helpers';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthUser } from '../common/types/auth-user';
 import {
@@ -21,21 +25,35 @@ export class HabitsController {
   ) {}
 
   @Get()
+  @ApiOperation({ summary: 'List active habits with logs and streaks' })
+  @ApiWrappedOkResponse('Habit list', { type: 'array', items: { type: 'object' } })
   findAll(@CurrentUser() user: AuthUser) {
     return this.habitsService.findAll(user.id);
   }
 
   @Post()
+  @ApiOperation({ summary: 'Create a habit' })
+  @ApiWrappedCreatedResponse('Created habit')
   create(@CurrentUser() user: AuthUser, @Body() dto: CreateHabitDto) {
     return this.habitsService.create(user.id, dto);
   }
 
   @Post('reorder')
+  @ApiOperation({ summary: 'Reorder habits' })
+  @ApiWrappedOkResponse('Reordered habit list', {
+    type: 'array',
+    items: { type: 'object' },
+  })
   reorder(@CurrentUser() user: AuthUser, @Body() dto: ReorderHabitsDto) {
     return this.habitsService.reorder(user.id, dto.habitIds);
   }
 
   @Patch(':id')
+  @ApiOperation({
+    summary: 'Update a habit',
+    description: 'Set archive: true to soft-delete the habit.',
+  })
+  @ApiWrappedOkResponse('Updated habit')
   update(
     @CurrentUser() user: AuthUser,
     @Param('id') id: string,
@@ -45,6 +63,16 @@ export class HabitsController {
   }
 
   @Post(':id/toggle')
+  @ApiOperation({ summary: 'Toggle habit completion for a date' })
+  @ApiWrappedOkResponse('Toggle result', {
+    type: 'object',
+    properties: {
+      count: { type: 'number', example: 1 },
+      targetCount: { type: 'number', example: 1 },
+      completed: { type: 'boolean', example: true },
+      date: { type: 'string', example: '2026-06-18' },
+    },
+  })
   toggle(
     @CurrentUser() user: AuthUser,
     @Param('id') id: string,

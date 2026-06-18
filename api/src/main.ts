@@ -21,7 +21,9 @@ async function bootstrap() {
 
   const config = new DocumentBuilder()
     .setTitle('Gridlife API')
-    .setDescription('Habit tracker + personal finance wallet API')
+    .setDescription(
+      'Habit tracker + personal finance wallet API. All successful responses are wrapped as `{ data, timestamp }` except where noted.',
+    )
     .setVersion('1.0')
     .addBearerAuth()
     .build();

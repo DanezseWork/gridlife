@@ -7,7 +7,11 @@ import {
   Patch,
   Post,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiWrappedCreatedResponse,
+  ApiWrappedOkResponse,
+} from '../common/swagger/api-response.helpers';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthUser } from '../common/types/auth-user';
 import { CreateWalletDto, UpdateWalletDto } from './dto/wallet.dto';
@@ -20,16 +24,28 @@ export class WalletsController {
   constructor(private readonly walletsService: WalletsService) {}
 
   @Get()
+  @ApiOperation({
+    summary: 'List wallets',
+    description: 'Each wallet includes a computed balance string.',
+  })
+  @ApiWrappedOkResponse('Wallet list', {
+    type: 'array',
+    items: { type: 'object' },
+  })
   findAll(@CurrentUser() user: AuthUser) {
     return this.walletsService.findAll(user.id);
   }
 
   @Post()
+  @ApiOperation({ summary: 'Create a wallet' })
+  @ApiWrappedCreatedResponse('Created wallet')
   create(@CurrentUser() user: AuthUser, @Body() dto: CreateWalletDto) {
     return this.walletsService.create(user.id, dto);
   }
 
   @Patch(':id')
+  @ApiOperation({ summary: 'Update a wallet' })
+  @ApiWrappedOkResponse('Updated wallet')
   update(
     @CurrentUser() user: AuthUser,
     @Param('id') id: string,
@@ -39,6 +55,8 @@ export class WalletsController {
   }
 
   @Delete(':id')
+  @ApiOperation({ summary: 'Delete a wallet' })
+  @ApiWrappedOkResponse('Wallet deleted', { type: 'null', nullable: true })
   delete(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.walletsService.delete(user.id, id);
   }

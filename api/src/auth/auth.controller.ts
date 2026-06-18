@@ -1,7 +1,9 @@
 import { Controller, Post, Body } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiWrappedCreatedResponseModel } from '../common/swagger/api-response.helpers';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
+import { LoginResponseDto } from './dto/login-response.dto';
 import { Public } from './public.decorator';
 
 @ApiTags('auth')
@@ -11,6 +13,8 @@ export class AuthController {
 
   @Public()
   @Post('login')
+  @ApiOperation({ summary: 'Login and receive a JWT bearer token' })
+  @ApiWrappedCreatedResponseModel(LoginResponseDto, 'Authenticated')
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
   }
