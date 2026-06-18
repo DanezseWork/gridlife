@@ -11,6 +11,7 @@ node_modules/
 api/dist/
 api/coverage/
 api/generated/
+api/*.tsbuildinfo
 
 # Web build artifacts
 web/.next/
