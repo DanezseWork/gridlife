@@ -548,6 +548,8 @@ export class TasksService {
             name: task.habit.name,
             color: task.habit.color,
             icon: task.habit.icon,
+            targetCount: task.habit.targetCount,
+            count: task.habit.logs[0]?.count ?? 0,
           }
         : null,
       createdAt: task.createdAt,

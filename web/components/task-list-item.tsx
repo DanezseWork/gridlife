@@ -192,6 +192,14 @@ export function TaskListItem({
 }: TaskListItemProps) {
   const HabitIcon = task.habit ? getHabitIconComponent(task.habit.icon) : null;
   const accentColor = task.habit?.color ?? "var(--color-accent)";
+  const habitCount = task.habit?.count ?? 0;
+  const habitTarget = task.habit?.targetCount ?? 1;
+  const isMultiTapHabit = Boolean(task.habit && habitTarget > 1);
+  const habitRatio =
+    habitTarget > 0 ? Math.min(habitCount / habitTarget, 1) : 0;
+  const habitInProgress = Boolean(
+    task.habit && !task.completed && habitCount > 0,
+  );
   const canModifyTask = !readOnly && !task.habitId && !task.completed;
   const canManageSubtasks =
     canModifyTask && onCreateSubtask && onToggleSubtask;
@@ -254,23 +262,58 @@ export function TaskListItem({
         {readOnly ? (
           <span
             aria-hidden
-            className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-2"
+            className={cn(
+              "mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-2",
+              task.habit && "relative overflow-hidden",
+            )}
             style={{
               borderColor: accentColor,
               background: task.completed ? accentColor : "transparent",
               color: task.completed ? "#fff" : accentColor,
             }}
           >
-            {task.completed && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+            {habitInProgress && (
+              <div
+                className="absolute inset-x-0 bottom-0"
+                style={{
+                  height: `${habitRatio * 100}%`,
+                  background: `color-mix(in srgb, ${accentColor} 35%, transparent)`,
+                }}
+              />
+            )}
+            {task.completed ? (
+              <Check className="relative h-3.5 w-3.5" strokeWidth={3} />
+            ) : habitInProgress ? (
+              <span className="relative font-data text-[10px] font-semibold leading-none">
+                {habitCount}/{habitTarget}
+              </span>
+            ) : isMultiTapHabit ? (
+              <span className="relative font-data text-[10px] font-semibold leading-none">
+                {habitTarget}×
+              </span>
+            ) : null}
           </span>
         ) : (
           <button
             type="button"
-            aria-label={task.completed ? "Mark incomplete" : "Mark complete"}
+            aria-label={
+              task.habit
+                ? task.completed
+                  ? `Reset ${task.title} for today`
+                  : habitInProgress
+                    ? `Log progress for ${task.title} (${habitCount}/${habitTarget})`
+                    : isMultiTapHabit
+                      ? `Log progress for ${task.title} (${habitTarget} taps to complete)`
+                      : `Log progress for ${task.title}`
+                : task.completed
+                  ? "Mark incomplete"
+                  : "Mark complete"
+            }
             disabled={!canToggle}
             onClick={() => onToggle(task.id)}
             className={cn(
               "mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-2 transition-transform",
+              task.habit && "relative overflow-hidden",
               canToggle && "active:scale-95",
               !canToggle && "cursor-default opacity-50",
             )}
@@ -282,10 +325,31 @@ export function TaskListItem({
             title={
               !canToggle && hasSubtasks && incompleteSubtasks > 0
                 ? "Complete all subtasks first"
-                : undefined
+                : isMultiTapHabit && !task.completed && habitCount === 0
+                  ? `${habitTarget} taps to complete`
+                  : undefined
             }
           >
-            {task.completed && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+            {habitInProgress && (
+              <div
+                className="absolute inset-x-0 bottom-0"
+                style={{
+                  height: `${habitRatio * 100}%`,
+                  background: `color-mix(in srgb, ${accentColor} 35%, transparent)`,
+                }}
+              />
+            )}
+            {task.completed ? (
+              <Check className="relative h-3.5 w-3.5" strokeWidth={3} />
+            ) : habitInProgress ? (
+              <span className="relative font-data text-[10px] font-semibold leading-none">
+                {habitCount}/{habitTarget}
+              </span>
+            ) : isMultiTapHabit ? (
+              <span className="relative font-data text-[10px] font-semibold leading-none">
+                {habitTarget}×
+              </span>
+            ) : null}
           </button>
         )}
 
@@ -310,6 +374,17 @@ export function TaskListItem({
             >
               {task.title}
             </h3>
+            {isMultiTapHabit && (
+              <span
+                className="shrink-0 rounded-md px-1.5 py-0.5 font-data text-[10px] font-semibold sm:text-xs"
+                style={{
+                  background: `color-mix(in srgb, ${accentColor} 15%, transparent)`,
+                  color: accentColor,
+                }}
+              >
+                {habitCount > 0 ? `${habitCount}/${habitTarget}` : `${habitTarget}×`}
+              </span>
+            )}
             {hasSubtasks && (
               <span className="text-xs opacity-40">
                 {task.subtasks.filter((s) => s.completed).length}/

@@ -101,6 +101,8 @@ export interface TaskHabit {
   name: string;
   color: string;
   icon: string;
+  targetCount: number;
+  count: number;
 }
 
 export interface Subtask {
