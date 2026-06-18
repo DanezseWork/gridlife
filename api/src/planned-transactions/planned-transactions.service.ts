@@ -68,7 +68,7 @@ export class PlannedTransactionsService {
     });
 
     const today = todayDateKeyUtc();
-    const horizon = projectionHorizon('year');
+    const horizon = projectionHorizon('year', 1);
     const queue: PlannedQueueItem[] = [];
 
     for (const rule of rules) {
@@ -155,7 +155,11 @@ export class PlannedTransactionsService {
     return queue;
   }
 
-  async getProjection(userId: string, range: 'week' | 'month' | 'year') {
+  async getProjection(
+    userId: string,
+    unit: 'week' | 'month' | 'year',
+    count = 1,
+  ) {
     await this.materializeDue(userId);
 
     const [wallets, rules] = await Promise.all([
@@ -166,9 +170,9 @@ export class PlannedTransactionsService {
       }),
     ]);
 
-    const points = projectionPoints(range);
+    const points = projectionPoints(unit, count);
     const today = todayDateKeyUtc();
-    const horizon = projectionHorizon(range);
+    const horizon = projectionHorizon(unit, count);
     const balances = new Map(
       wallets.map((wallet) => [wallet.id, Number(wallet.balance)]),
     );
@@ -215,7 +219,7 @@ export class PlannedTransactionsService {
 
       return {
         date,
-        label: this.formatProjectionLabel(date, range),
+        label: this.formatProjectionLabel(date, unit, count),
         totals: totalsByCurrency(pointBalances),
       };
     });
@@ -565,26 +569,39 @@ export class PlannedTransactionsService {
 
   private formatProjectionLabel(
     date: string,
-    range: 'week' | 'month' | 'year',
+    unit: 'week' | 'month' | 'year',
+    count: number,
   ) {
     const parsed = parseDateKey(date);
 
-    if (range === 'year') {
-      return parsed.toLocaleDateString(undefined, {
+    if (unit === 'year' || (unit === 'month' && count > 1)) {
+      const options: Intl.DateTimeFormatOptions = {
         month: 'short',
         timeZone: 'UTC',
-      });
+      };
+      if (unit === 'year' && count > 1) {
+        options.year = '2-digit';
+      }
+      return parsed.toLocaleDateString(undefined, options);
     }
 
-    if (range === 'month') {
+    if (unit === 'month') {
       return parsed.toLocaleDateString(undefined, {
         day: 'numeric',
         timeZone: 'UTC',
       });
     }
 
+    if (count === 1) {
+      return parsed.toLocaleDateString(undefined, {
+        weekday: 'short',
+        timeZone: 'UTC',
+      });
+    }
+
     return parsed.toLocaleDateString(undefined, {
-      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
       timeZone: 'UTC',
     });
   }

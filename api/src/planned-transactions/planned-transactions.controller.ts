@@ -38,13 +38,26 @@ export class PlannedTransactionsController {
   @Get('projection')
   getProjection(
     @CurrentUser() user: AuthUser,
-    @Query('range') range: 'week' | 'month' | 'year' = 'month',
+    @Query('range') range?: 'week' | 'month' | 'year',
+    @Query('unit') unit?: 'week' | 'month' | 'year',
+    @Query('count') count?: string,
   ) {
-    const safeRange =
-      range === 'week' || range === 'month' || range === 'year'
-        ? range
-        : 'month';
-    return this.plannedTransactionsService.getProjection(user.id, safeRange);
+    let safeUnit: 'week' | 'month' | 'year' = 'month';
+    let safeCount = 1;
+
+    if (unit === 'week' || unit === 'month' || unit === 'year') {
+      safeUnit = unit;
+      const parsed = Number.parseInt(count ?? '1', 10);
+      safeCount = Number.isFinite(parsed) ? parsed : 1;
+    } else if (range === 'week' || range === 'month' || range === 'year') {
+      safeUnit = range;
+    }
+
+    return this.plannedTransactionsService.getProjection(
+      user.id,
+      safeUnit,
+      safeCount,
+    );
   }
 
   @Post()

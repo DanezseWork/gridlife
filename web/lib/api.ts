@@ -34,6 +34,8 @@ async function request<T>(
   const res = await fetch(`${API_URL}${path}`, {
     ...options,
     headers,
+  }).catch(() => {
+    throw new ApiError("Unable to reach the server. Is the API running?", 0);
   });
 
   if (!res.ok) {
@@ -196,6 +198,13 @@ export interface PlannedQueueItem {
   endDate: string | null;
   nextDueDate: string | null;
   scheduleSummary: string;
+}
+
+export type ProjectionUnit = "week" | "month" | "year";
+
+export interface NetworkProjectionRange {
+  unit: ProjectionUnit;
+  count: number;
 }
 
 export interface NetworkProjectionPoint {
@@ -388,9 +397,9 @@ export const api = {
 
   getPlannedQueue: () => request<PlannedQueueItem[]>("/planned-transactions/queue"),
 
-  getNetworkProjection: (range: "week" | "month" | "year") =>
+  getNetworkProjection: ({ unit, count }: NetworkProjectionRange) =>
     request<NetworkProjectionPoint[]>(
-      `/planned-transactions/projection?range=${range}`,
+      `/planned-transactions/projection?unit=${unit}&count=${count}`,
     ),
 
   createPlannedTransaction: (data: {

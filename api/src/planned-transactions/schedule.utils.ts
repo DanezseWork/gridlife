@@ -214,30 +214,99 @@ export function generateOccurrenceDates(
   }
 }
 
-export function projectionHorizon(range: 'week' | 'month' | 'year'): string {
-  const today = todayDateKeyUtc();
-  if (range === 'week') return addDays(today, 6);
-  if (range === 'month') return addDays(today, 29);
-  return addDays(today, 364);
+export type ProjectionUnit = 'week' | 'month' | 'year';
+
+const MAX_PROJECTION_COUNT: Record<ProjectionUnit, number> = {
+  week: 104,
+  month: 120,
+  year: 10,
+};
+
+export function clampProjectionCount(
+  unit: ProjectionUnit,
+  count: number,
+): number {
+  const max = MAX_PROJECTION_COUNT[unit];
+  return Math.max(1, Math.min(Math.floor(count), max));
 }
 
-export function projectionPoints(range: 'week' | 'month' | 'year'): string[] {
+function monthEndAfterOffset(fromDate: string, monthOffset: number): string {
+  let year = utcYear(fromDate);
+  let month = utcMonth(fromDate) + monthOffset;
+
+  while (month > 12) {
+    month -= 12;
+    year += 1;
+  }
+
+  return clampDay(year, month, daysInMonth(year, month));
+}
+
+export function projectionHorizon(
+  unit: ProjectionUnit,
+  count = 1,
+): string {
+  const safeCount = clampProjectionCount(unit, count);
   const today = todayDateKeyUtc();
-  const horizon = projectionHorizon(range);
 
-  if (range === 'week') {
-    return Array.from({ length: 7 }, (_, index) => addDays(today, index));
+  if (unit === 'week') {
+    return addDays(today, safeCount * 7 - 1);
   }
 
-  if (range === 'month') {
-    return Array.from({ length: 30 }, (_, index) => addDays(today, index));
+  if (unit === 'month') {
+    if (safeCount === 1) {
+      return addDays(today, 29);
+    }
+    return monthEndAfterOffset(today, safeCount);
   }
 
+  return monthEndAfterOffset(today, safeCount * 12);
+}
+
+export function projectionPoints(
+  unit: ProjectionUnit,
+  count = 1,
+): string[] {
+  const safeCount = clampProjectionCount(unit, count);
+  const today = todayDateKeyUtc();
+  const horizon = projectionHorizon(unit, safeCount);
+
+  if (unit === 'week') {
+    if (safeCount === 1) {
+      return Array.from({ length: 7 }, (_, index) => addDays(today, index));
+    }
+
+    const points: string[] = [today];
+    for (let index = 1; index < safeCount; index += 1) {
+      const point = addDays(today, index * 7 + 6);
+      points.push(
+        compareDateKeys(point, horizon) <= 0 ? point : horizon,
+      );
+    }
+    return points;
+  }
+
+  if (unit === 'month') {
+    if (safeCount === 1) {
+      return Array.from({ length: 30 }, (_, index) => addDays(today, index));
+    }
+
+    const points: string[] = [today];
+    for (let index = 1; index < safeCount; index += 1) {
+      const monthEnd = monthEndAfterOffset(today, index);
+      points.push(
+        compareDateKeys(monthEnd, horizon) <= 0 ? monthEnd : horizon,
+      );
+    }
+    return points;
+  }
+
+  const totalMonths = safeCount * 12;
   const points: string[] = [];
   let year = utcYear(today);
   let month = utcMonth(today);
 
-  for (let index = 0; index < 12; index += 1) {
+  for (let index = 0; index < totalMonths; index += 1) {
     if (index === 0) {
       points.push(today);
     } else {
@@ -247,7 +316,9 @@ export function projectionPoints(range: 'week' | 'month' | 'year'): string[] {
         year += 1;
       }
       const monthEnd = clampDay(year, month, daysInMonth(year, month));
-      points.push(compareDateKeys(monthEnd, horizon) <= 0 ? monthEnd : horizon);
+      points.push(
+        compareDateKeys(monthEnd, horizon) <= 0 ? monthEnd : horizon,
+      );
     }
   }
 

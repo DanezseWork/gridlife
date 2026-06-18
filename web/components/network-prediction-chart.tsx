@@ -2,18 +2,34 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { HoloCard } from "@/components/holo-card";
-import { api, type NetworkProjectionPoint, type Wallet } from "@/lib/api";
+import {
+  api,
+  type NetworkProjectionPoint,
+  type NetworkProjectionRange,
+  type ProjectionUnit,
+  type Wallet,
+} from "@/lib/api";
 import { formatMoney, resolveCurrency, type CurrencyCode } from "@/lib/currencies";
 import { getCurrencyLineColor } from "@/lib/network-history";
 import { cn } from "@/lib/utils";
 
-type PredictionRange = "week" | "month" | "year";
-
-const RANGES: Array<{ value: PredictionRange; label: string }> = [
-  { value: "week", label: "Week" },
-  { value: "month", label: "Month" },
-  { value: "year", label: "Year" },
+const PRESETS: Array<{ label: string; unit: ProjectionUnit; count: number }> = [
+  { label: "Week", unit: "week", count: 1 },
+  { label: "Month", unit: "month", count: 1 },
+  { label: "Year", unit: "year", count: 1 },
 ];
+
+const MAX_PROJECTION_COUNT: Record<ProjectionUnit, number> = {
+  week: 104,
+  month: 120,
+  year: 10,
+};
+
+const UNIT_LABELS: Record<ProjectionUnit, string> = {
+  week: "Weeks",
+  month: "Months",
+  year: "Years",
+};
 
 const CHART_WIDTH = 640;
 const CHART_HEIGHT = 180;
@@ -22,6 +38,10 @@ const CHART_PADDING = { top: 16, right: 12, bottom: 28, left: 12 };
 interface NetworkPredictionChartProps {
   wallets: Wallet[];
   refreshKey?: number | string;
+}
+
+function clampCount(unit: ProjectionUnit, count: number): number {
+  return Math.max(1, Math.min(Math.floor(count), MAX_PROJECTION_COUNT[unit]));
 }
 
 function buildLinePath(
@@ -69,11 +89,31 @@ function getActiveCurrencies(
   return Array.from(currencies).sort((left, right) => left.localeCompare(right));
 }
 
+function shouldShowAxisLabel(index: number, total: number): boolean {
+  if (total <= 7) return true;
+  if (total <= 31) return index % 5 === 0 || index === total - 1;
+  if (total <= 52) return index % 2 === 0 || index === total - 1;
+
+  const step = Math.max(1, Math.ceil(total / 12));
+  return index % step === 0 || index === total - 1;
+}
+
+function isPresetRange(range: NetworkProjectionRange): boolean {
+  return PRESETS.some(
+    (preset) => preset.unit === range.unit && preset.count === range.count,
+  );
+}
+
 export function NetworkPredictionChart({
   wallets,
   refreshKey = 0,
 }: NetworkPredictionChartProps) {
-  const [range, setRange] = useState<PredictionRange>("month");
+  const [range, setRange] = useState<NetworkProjectionRange>({
+    unit: "month",
+    count: 1,
+  });
+  const [customMode, setCustomMode] = useState(false);
+  const [customCountInput, setCustomCountInput] = useState("1");
   const [data, setData] = useState<NetworkProjectionPoint[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -84,6 +124,9 @@ export function NetworkPredictionChart({
       .getNetworkProjection(range)
       .then((projection) => {
         if (!cancelled) setData(projection);
+      })
+      .catch(() => {
+        if (!cancelled) setData([]);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -100,6 +143,13 @@ export function NetworkPredictionChart({
 
   const latestTotals = data.at(-1)?.totals ?? {};
 
+  const applyCustomRange = (unit: ProjectionUnit, rawCount: string) => {
+    const parsed = Number.parseInt(rawCount, 10);
+    const count = clampCount(unit, Number.isFinite(parsed) ? parsed : 1);
+    setCustomCountInput(String(count));
+    setRange({ unit, count });
+  };
+
   if (wallets.length === 0) return null;
 
   return (
@@ -108,15 +158,19 @@ export function NetworkPredictionChart({
         <h2 className="text-sm font-medium opacity-60 sm:text-base">
           Network prediction
         </h2>
-        <div className="flex flex-wrap gap-2">
-          {RANGES.map(({ value, label }) => (
+        <div className="flex flex-wrap items-center gap-2">
+          {PRESETS.map(({ label, unit, count }) => (
             <button
-              key={value}
+              key={label}
               type="button"
-              onClick={() => setRange(value)}
+              onClick={() => {
+                setCustomMode(false);
+                setRange({ unit, count });
+                setCustomCountInput(String(count));
+              }}
               className={cn(
                 "min-h-9 rounded-md border px-3 py-1.5 text-xs transition-colors sm:text-sm",
-                range === value
+                !customMode && range.unit === unit && range.count === count
                   ? "chip-active"
                   : "border-[var(--color-border)] opacity-70 hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]",
               )}
@@ -124,8 +178,66 @@ export function NetworkPredictionChart({
               {label}
             </button>
           ))}
+          <button
+            type="button"
+            onClick={() => {
+              setCustomMode(true);
+              if (isPresetRange(range)) {
+                setCustomCountInput("2");
+                setRange({ unit: range.unit, count: 2 });
+              } else {
+                setCustomCountInput(String(range.count));
+              }
+            }}
+            className={cn(
+              "min-h-9 rounded-md border px-3 py-1.5 text-xs transition-colors sm:text-sm",
+              customMode
+                ? "chip-active"
+                : "border-[var(--color-border)] opacity-70 hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]",
+            )}
+          >
+            Custom
+          </button>
         </div>
       </div>
+
+      {customMode && (
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <label className="flex items-center gap-2 text-xs opacity-70 sm:text-sm">
+            <span>Look ahead</span>
+            <input
+              type="number"
+              min={1}
+              max={MAX_PROJECTION_COUNT[range.unit]}
+              value={customCountInput}
+              onChange={(event) => {
+                setCustomCountInput(event.target.value);
+              }}
+              onBlur={() => applyCustomRange(range.unit, customCountInput)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  applyCustomRange(range.unit, customCountInput);
+                }
+              }}
+              className="h-9 w-20 rounded-md border border-[var(--color-border)] bg-transparent px-2 font-data tabular-nums"
+            />
+          </label>
+          <select
+            value={range.unit}
+            onChange={(event) => {
+              const unit = event.target.value as ProjectionUnit;
+              applyCustomRange(unit, customCountInput);
+            }}
+            className="h-9 rounded-md border border-[var(--color-border)] bg-transparent px-2 text-xs sm:text-sm"
+          >
+            {(Object.keys(UNIT_LABELS) as ProjectionUnit[]).map((unit) => (
+              <option key={unit} value={unit}>
+                {UNIT_LABELS[unit]}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <HoloCard className="overflow-hidden">
         {loading ? (
@@ -212,11 +324,7 @@ export function NetworkPredictionChart({
                 })}
 
                 {data.map((point, index) => {
-                  if (range === "month" && index % 5 !== 0 && index !== data.length - 1) {
-                    return null;
-                  }
-
-                  if (range === "year" && index % 2 !== 0 && index !== data.length - 1) {
+                  if (!shouldShowAxisLabel(index, data.length)) {
                     return null;
                   }
 
