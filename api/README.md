@@ -33,7 +33,8 @@ Requires Postgres (see root `docker compose up -d`).
 |--------|---------|
 | `npm run start:dev` | Dev server with watch |
 | `npm run start:prod` | Production server |
-| `npm run prisma:migrate` | Run Prisma migrations |
+| `npm run prisma:migrate` | Run Prisma migrations (local dev) |
+| `npm run prisma:migrate:deploy` | Apply migrations in production |
 | `npm run prisma:seed` | Seed demo user + sample data |
 | `npm run prisma:generate` | Regenerate Prisma client |
 | `npm run test` | Unit tests |

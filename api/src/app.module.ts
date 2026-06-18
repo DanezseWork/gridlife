@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { AuthModule } from './auth/auth.module';
+import { HealthController } from './health.controller';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { HabitsModule } from './habits/habits.module';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
@@ -25,6 +26,7 @@ import { WalletsModule } from './wallets/wallets.module';
     PlannedTransactionsModule,
     SettingsModule,
   ],
+  controllers: [HealthController],
   providers: [
     {
       provide: APP_GUARD,

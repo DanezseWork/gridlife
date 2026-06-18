@@ -229,9 +229,43 @@ Gridlife uses a minimal, mobile-first interface with a customizable accent theme
 
 ## Deploy
 
-| Service | Target |
-|---------|--------|
-| API | Railway |
-| Web | Vercel |
+| Service | Target | Root directory |
+|---------|--------|----------------|
+| API + Postgres | Railway | `api` |
+| Web | Vercel | `web` |
 
-Set production environment variables on each platform (`DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGIN`, `NEXT_PUBLIC_API_URL`, etc.).
+### Railway (API)
+
+1. Create a Railway project and add a **PostgreSQL** plugin.
+2. Add a service from this repo with **Root Directory** set to `api`.
+3. Set environment variables:
+
+   | Variable | Value |
+   |----------|-------|
+   | `DATABASE_URL` | From the Railway Postgres plugin (use as provided; add `?sslmode=require` if needed) |
+   | `JWT_SECRET` | Strong random secret (required) |
+   | `CORS_ORIGIN` | Your Vercel production URL (e.g. `https://gridlife.vercel.app`) |
+   | `JWT_EXPIRES_IN` | Optional (default `7d`) |
+
+4. Deploy. `api/railway.toml` runs migrations before each deploy (`prisma migrate deploy`) and health-checks `GET /health`.
+5. Create a production user — there is no sign-up endpoint. Run `npm run prisma:seed` once from Railway shell, or insert a user directly in Postgres.
+
+### Vercel (Web)
+
+1. Import the repo and set **Root Directory** to `web`.
+2. Set environment variables:
+
+   | Variable | Value |
+   |----------|-------|
+   | `NEXT_PUBLIC_API_URL` | Your Railway API URL (e.g. `https://your-api.up.railway.app`) |
+
+   `NEXT_PUBLIC_*` vars are baked in at build time — set them for Production (and Preview if you use preview deploys).
+
+3. Deploy. Ensure Railway `CORS_ORIGIN` matches the Vercel URL you use.
+
+### Production scripts (API)
+
+| Script | Purpose |
+|--------|---------|
+| `postinstall` | Regenerates Prisma Client after `npm install` |
+| `prisma:migrate:deploy` | Applies committed migrations (used by Railway pre-deploy) |
