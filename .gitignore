@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+
+# Environment (keep examples)
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# API build artifacts
+api/dist/
+api/coverage/
+api/generated/
+
+# Web build artifacts
+web/.next/
+web/out/
+web/build/
+web/.vercel/
+web/*.tsbuildinfo
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.pem
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*

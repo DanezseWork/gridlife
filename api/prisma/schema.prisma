@@ -1,0 +1,154 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  String               @id @default(uuid())
+  email               String               @unique
+  password            String
+  name                String?
+  createdAt           DateTime             @default(now())
+  habits              Habit[]
+  tasks               Task[]
+  wallets             Wallet[]
+  transactions        Transaction[]
+  plannedTransactions PlannedTransaction[]
+  settings            UserSettings?
+}
+
+model Habit {
+  id           String     @id @default(uuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  color        String     @default("#00ffff")
+  icon         String     @default("activity")
+  targetCount  Int        @default(1)
+  frequency    String     @default("daily")
+  scheduleDays Json?
+  sortOrder    Int        @default(0)
+  createdAt    DateTime   @default(now())
+  archivedAt   DateTime?
+  logs         HabitLog[]
+  tasks        Task[]
+}
+
+model Task {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  details     String?
+  date        DateTime  @db.Date
+  completedAt DateTime?
+  habitId     String?
+  habit       Habit?    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  subtasks    Subtask[]
+
+  @@unique([habitId, date])
+  @@index([userId, date])
+}
+
+model Subtask {
+  id          String    @id @default(uuid())
+  taskId      String
+  task        Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  title       String
+  completedAt DateTime?
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+
+  @@index([taskId])
+}
+
+model HabitLog {
+  id            String   @id @default(uuid())
+  habitId       String
+  habit         Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  completedDate DateTime @db.Date
+  count         Int      @default(1)
+  createdAt     DateTime @default(now())
+
+  @@unique([habitId, completedDate])
+}
+
+model Wallet {
+  id                 String               @id @default(uuid())
+  userId             String
+  user               User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name               String
+  currency           String               @default("PHP")
+  color              String               @default("#00ffff")
+  icon               String               @default("wallet")
+  createdAt          DateTime             @default(now())
+  outgoing           Transaction[]        @relation("FromWallet")
+  incoming           Transaction[]        @relation("ToWallet")
+  plannedOutgoing    PlannedTransaction[] @relation("PlannedFromWallet")
+  plannedIncoming    PlannedTransaction[] @relation("PlannedToWallet")
+}
+
+model Transaction {
+  id           String             @id @default(uuid())
+  userId       String
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fromWalletId String?
+  fromWallet   Wallet?            @relation("FromWallet", fields: [fromWalletId], references: [id])
+  toWalletId   String?
+  toWallet     Wallet?            @relation("ToWallet", fields: [toWalletId], references: [id])
+  amount       Decimal            @db.Decimal(12, 2)
+  type         String
+  note         String?
+  date         DateTime           @db.Date
+  createdAt    DateTime           @default(now())
+  occurrence   PlannedOccurrence?
+}
+
+model PlannedTransaction {
+  id            String              @id @default(uuid())
+  userId        String
+  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type          String
+  amount        Decimal             @db.Decimal(12, 2)
+  note          String?
+  fromWalletId  String?
+  fromWallet    Wallet?             @relation("PlannedFromWallet", fields: [fromWalletId], references: [id])
+  toWalletId    String?
+  toWallet      Wallet?             @relation("PlannedToWallet", fields: [toWalletId], references: [id])
+  kind          String
+  scheduledDate DateTime?           @db.Date
+  frequency     String?
+  scheduleDays  Json?
+  startDate     DateTime?           @db.Date
+  endDate       DateTime?           @db.Date
+  active        Boolean             @default(true)
+  createdAt     DateTime            @default(now())
+  occurrences   PlannedOccurrence[]
+}
+
+model PlannedOccurrence {
+  id                   String             @id @default(uuid())
+  plannedTransactionId String
+  plannedTransaction   PlannedTransaction @relation(fields: [plannedTransactionId], references: [id], onDelete: Cascade)
+  dueDate              DateTime           @db.Date
+  transactionId        String?            @unique
+  transaction          Transaction?       @relation(fields: [transactionId], references: [id])
+  createdAt            DateTime           @default(now())
+
+  @@unique([plannedTransactionId, dueDate])
+}
+
+model UserSettings {
+  id          String @id @default(uuid())
+  userId      String @unique
+  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  baseColor   String @default("#ffffff")
+  accentColor String @default("#00ffff")
+  currency    String @default("PHP")
+}
