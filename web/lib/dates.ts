@@ -11,8 +11,20 @@ export function getTodayKey(): string {
   return toLocalDateKey(today);
 }
 
+export function getYesterdayKey(): string {
+  return addDaysToDateKey(getTodayKey(), -1);
+}
+
 export function isPastDateKey(dateKey: string): boolean {
   return dateKey < getTodayKey();
+}
+
+export function isReadOnlyTaskDateKey(dateKey: string): boolean {
+  return dateKey < getYesterdayKey();
+}
+
+export function isLoggableHabitDateKey(dateKey: string): boolean {
+  return dateKey === getTodayKey() || dateKey === getYesterdayKey();
 }
 
 export function addDaysToDateKey(dateKey: string, days: number): string {

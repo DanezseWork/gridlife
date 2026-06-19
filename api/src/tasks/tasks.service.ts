@@ -7,8 +7,10 @@ import {
 import { PrismaService } from '../prisma.service';
 import {
   formatDateKeyUtc,
+  isLoggableHabitDateKey,
   parseDateKey,
   todayDateKey,
+  yesterdayDateKey,
 } from '../common/date.utils';
 import type { HabitFrequency } from '../habits/habit-schedule.types';
 import {
@@ -72,7 +74,7 @@ export class TasksService {
   }
 
   async reorder(userId: string, dateKey: string, taskIds: string[]) {
-    this.assertDateNotPast(dateKey);
+    this.assertDateEditable(dateKey);
     await this.syncHabitTasksForDate(userId, dateKey);
     const tasks = await this.findTasksForDate(userId, dateKey);
     const incompleteTasks = tasks.filter(
@@ -209,7 +211,7 @@ export class TasksService {
 
   async update(userId: string, taskId: string, dto: UpdateTaskDto) {
     const task = await this.ensureStandaloneTask(userId, taskId);
-    this.assertDateNotPast(formatDateKeyUtc(task.date));
+    this.assertDateEditable(formatDateKeyUtc(task.date));
     this.assertTaskNotCompleted(task);
 
     const updated = await this.prisma.task.update({
@@ -231,7 +233,7 @@ export class TasksService {
 
   async remove(userId: string, taskId: string) {
     const task = await this.ensureStandaloneTask(userId, taskId);
-    this.assertDateNotPast(formatDateKeyUtc(task.date));
+    this.assertDateEditable(formatDateKeyUtc(task.date));
     this.assertTaskNotCompleted(task);
     await this.prisma.task.delete({ where: { id: task.id } });
   }
@@ -239,7 +241,7 @@ export class TasksService {
   async createSubtask(userId: string, taskId: string, dto: CreateSubtaskDto) {
     const task = await this.ensureStandaloneTask(userId, taskId);
     const dateKey = formatDateKeyUtc(task.date);
-    this.assertDateNotPast(dateKey);
+    this.assertDateEditable(dateKey);
 
     const sortOrder = await this.nextSubtaskSortOrder(taskId);
     const subtask = await this.prisma.subtask.create({
@@ -263,7 +265,7 @@ export class TasksService {
   async toggleSubtask(userId: string, taskId: string, subtaskId: string) {
     const task = await this.ensureStandaloneTask(userId, taskId);
     const dateKey = formatDateKeyUtc(task.date);
-    this.assertDateNotPast(dateKey);
+    this.assertDateEditable(dateKey);
 
     const subtask = await this.prisma.subtask.findUnique({
       where: { id: subtaskId },
@@ -317,7 +319,7 @@ export class TasksService {
     dto: UpdateSubtaskDto,
   ) {
     const task = await this.ensureStandaloneTask(userId, taskId);
-    this.assertDateNotPast(formatDateKeyUtc(task.date));
+    this.assertDateEditable(formatDateKeyUtc(task.date));
 
     const subtask = await this.prisma.subtask.findUnique({
       where: { id: subtaskId },
@@ -339,7 +341,7 @@ export class TasksService {
 
   async removeSubtask(userId: string, taskId: string, subtaskId: string) {
     const task = await this.ensureStandaloneTask(userId, taskId);
-    this.assertDateNotPast(formatDateKeyUtc(task.date));
+    this.assertDateEditable(formatDateKeyUtc(task.date));
 
     const subtask = await this.prisma.subtask.findUnique({
       where: { id: subtaskId },
@@ -376,12 +378,12 @@ export class TasksService {
     }
 
     const dateKey = formatDateKeyUtc(task.date);
-    this.assertDateNotPast(dateKey);
+    this.assertDateEditable(dateKey);
 
     if (task.habitId && task.habit) {
-      if (dateKey !== todayDateKey()) {
+      if (!isLoggableHabitDateKey(dateKey)) {
         throw new BadRequestException(
-          'Habit tasks can only be toggled for today',
+          'Habit tasks can only be toggled for today or yesterday',
         );
       }
 
@@ -613,6 +615,12 @@ export class TasksService {
   private assertDateNotPast(dateKey: string) {
     if (dateKey < todayDateKey()) {
       throw new BadRequestException('Past dates are read-only');
+    }
+  }
+
+  private assertDateEditable(dateKey: string) {
+    if (dateKey < yesterdayDateKey()) {
+      throw new BadRequestException('Dates older than yesterday are read-only');
     }
   }
 

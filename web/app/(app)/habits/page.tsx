@@ -88,8 +88,8 @@ export default function HabitsPage() {
     loadHabits();
   }, [loadHabits]);
 
-  async function handleToggleToday(habitId: string) {
-    await api.toggleHabit(habitId, todayKey);
+  async function handleToggleDate(habitId: string, dateKey: string) {
+    await api.toggleHabit(habitId, dateKey);
     await loadHabits();
   }
 
@@ -193,7 +193,7 @@ export default function HabitsPage() {
             weekCount={weekCount}
             onOpen={setCalendarHabit}
             onEdit={setEditingHabit}
-            onToggleToday={handleToggleToday}
+            onToggleToday={(habitId) => handleToggleDate(habitId, todayKey)}
             onReorder={handleReorder}
           />
         )}
@@ -223,7 +223,7 @@ export default function HabitsPage() {
         onOpenChange={(open) => {
           if (!open) setCalendarHabit(null);
         }}
-        onToggleToday={handleToggleToday}
+        onToggleDate={handleToggleDate}
       />
     </PageContainer>
   );

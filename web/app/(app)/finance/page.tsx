@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { api, type PlannedQueueItem, type Transaction, type Wallet } from "@/lib/api";
+import { api, ApiError, type PlannedQueueItem, type Transaction, type Wallet } from "@/lib/api";
 import { formatMoney, resolveCurrency } from "@/lib/currencies";
 import { getTodayKey, getTomorrowKey, parseDateKey } from "@/lib/dates";
 import { nextHabitColor } from "@/lib/habit-colors";
@@ -108,6 +108,7 @@ export default function FinancePage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [plannedQueue, setPlannedQueue] = useState<PlannedQueueItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [txDialogOpen, setTxDialogOpen] = useState(false);
   const [walletDialogOpen, setWalletDialogOpen] = useState(false);
   const [editingWallet, setEditingWallet] = useState<Wallet | null>(null);
@@ -133,6 +134,7 @@ export default function FinancePage() {
 
   const loadData = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const [w, t, queue] = await Promise.all([
         api.getWallets(),
@@ -147,6 +149,12 @@ export default function FinancePage() {
       );
       if (w.length > 0 && !fromWalletId) setFromWalletId(w[0].id);
       if (w.length > 1 && !toWalletId) setToWalletId(w[1].id);
+    } catch (error) {
+      setLoadError(
+        error instanceof ApiError
+          ? error.message
+          : "Failed to load finance data",
+      );
     } finally {
       setLoading(false);
     }
@@ -346,7 +354,27 @@ export default function FinancePage() {
           </button>
         </header>
 
-        {loading ? (
+        {loadError ? (
+          <div
+            className="rounded-2xl p-8 text-center"
+            style={{
+              background:
+                "color-mix(in srgb, var(--color-inverse) 8%, var(--color-base))",
+              border:
+                "1px solid color-mix(in srgb, var(--color-inverse) 10%, transparent)",
+            }}
+          >
+            <p className="text-sm text-[#ff3366] sm:text-base">{loadError}</p>
+            <Button
+              type="button"
+              variant="outline"
+              className="mt-4"
+              onClick={() => loadData()}
+            >
+              Retry
+            </Button>
+          </div>
+        ) : loading ? (
           <div className="space-y-4">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               <ScanlineSkeleton className="h-28" />

@@ -33,7 +33,7 @@ Archived habits are hidden from the list; there is no restore UI yet.
 - Standalone tasks with title, details, and subtasks
 - Create, edit, delete, and drag-and-drop reorder (incomplete tasks only)
 - Habit-linked tasks auto-generated from habit schedules
-- Past dates are read-only; habit tasks can only be toggled on today
+- Dates older than yesterday are read-only; habit tasks can be toggled for today or yesterday
 - Parent tasks require all subtasks complete before marking done
 
 ### Finance

@@ -13,6 +13,8 @@ import {
   addMonths,
   getMonthCalendarDays,
   getTodayKey,
+  getYesterdayKey,
+  isLoggableHabitDateKey,
   toLocalDateKey,
 } from "@/lib/dates";
 import { getCellBackground, getDayProgress } from "@/lib/habit-progress";
@@ -25,16 +27,17 @@ interface HabitCalendarDialogProps {
   habit: Habit | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onToggleToday: (habitId: string) => void;
+  onToggleDate: (habitId: string, dateKey: string) => void;
 }
 
 export function HabitCalendarDialog({
   habit,
   open,
   onOpenChange,
-  onToggleToday,
+  onToggleDate,
 }: HabitCalendarDialogProps) {
   const todayKey = getTodayKey();
+  const yesterdayKey = getYesterdayKey();
   const [viewMonth, setViewMonth] = useState(() => {
     const today = new Date();
     return new Date(today.getFullYear(), today.getMonth(), 1);
@@ -124,8 +127,9 @@ export function HabitCalendarDialog({
               const dateKey = toLocalDateKey(day);
               const progress = getDayProgress(habit, dateKey);
               const isToday = dateKey === todayKey;
+              const isYesterday = dateKey === yesterdayKey;
               const isFuture = dateKey > todayKey;
-              const canToggle = isToday && progress.due;
+              const canToggle = isLoggableHabitDateKey(dateKey) && progress.due;
 
               return (
                 <button
@@ -139,10 +143,12 @@ export function HabitCalendarDialog({
                         ? `${dateKey} ${progress.count}/${progress.targetCount}`
                         : isToday
                           ? `Log ${habit.name} for today`
-                          : `${dateKey} no progress`
+                          : isYesterday
+                            ? `Log ${habit.name} for yesterday`
+                            : `${dateKey} no progress`
                   }
                   onClick={() => {
-                    if (canToggle) onToggleToday(habit.id);
+                    if (canToggle) onToggleDate(habit.id, dateKey);
                   }}
                   className={cn(
                     "relative flex aspect-square items-center justify-center overflow-hidden rounded-lg text-sm transition-colors",
@@ -160,6 +166,11 @@ export function HabitCalendarDialog({
                     ...(isToday && progress.due
                       ? { boxShadow: `0 0 0 2px ${habit.color}` }
                       : {}),
+                    ...(isYesterday && progress.due
+                      ? {
+                          boxShadow: `0 0 0 1px color-mix(in srgb, ${habit.color} 70%, transparent)`,
+                        }
+                      : {}),
                     ...(!progress.due ? { opacity: 0.35 } : {}),
                   }}
                 >
@@ -173,7 +184,7 @@ export function HabitCalendarDialog({
             <button
               type="button"
               disabled={!isDueToday}
-              onClick={() => onToggleToday(habit.id)}
+              onClick={() => onToggleDate(habit.id, todayKey)}
               className={cn(
                 "flex h-12 w-12 items-center justify-center rounded-xl border-2 transition-transform active:scale-95 disabled:opacity-35",
               )}
@@ -202,7 +213,7 @@ export function HabitCalendarDialog({
                 ? "Completed today — tap to reset"
                 : todayProgress && todayProgress.count > 0
                   ? `${todayProgress.count}/${todayProgress.targetCount} taps — keep tapping today`
-                  : "Only today can be logged"}
+                  : "Tap today or yesterday in the calendar to log this habit"}
           </p>
         </div>
       </DialogContent>

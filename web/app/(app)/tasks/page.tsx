@@ -9,11 +9,13 @@ import { ScanlineSkeleton } from "@/components/scanline-skeleton";
 import { SortableTaskList } from "@/components/sortable-task-list";
 import { TaskCalendar, monthKey } from "@/components/task-calendar";
 import { api, type Task, type TaskCalendarDay } from "@/lib/api";
-import { getTodayKey, isPastDateKey, parseDateKey } from "@/lib/dates";
+import { getTodayKey, getYesterdayKey, isLoggableHabitDateKey, isPastDateKey, isReadOnlyTaskDateKey, parseDateKey } from "@/lib/dates";
 
 function formatSelectedDateLabel(dateKey: string): string {
   const todayKey = getTodayKey();
+  const yesterdayKey = getYesterdayKey();
   if (dateKey === todayKey) return "Today";
+  if (dateKey === yesterdayKey) return "Yesterday";
 
   const date = parseDateKey(dateKey);
   return date.toLocaleDateString(undefined, {
@@ -155,11 +157,12 @@ export default function TasksPage() {
     setViewMonth(new Date(date.getFullYear(), date.getMonth(), 1));
   }
 
+  const isReadOnlyDate = isReadOnlyTaskDateKey(selectedDate);
   const isPastDate = isPastDateKey(selectedDate);
 
   const canToggleTask = (task: Task) => {
-    if (isPastDate) return false;
-    if (task.habitId) return selectedDate === todayKey;
+    if (isReadOnlyDate) return false;
+    if (task.habitId) return isLoggableHabitDateKey(selectedDate);
     if (!task.completed && task.subtasks.length > 0) {
       return task.subtasks.every((subtask) => subtask.completed);
     }
@@ -221,7 +224,7 @@ export default function TasksPage() {
               <p className="text-sm opacity-60 sm:text-base">
                 {selectedDate === todayKey
                   ? "Nothing on the list today. Habits due today appear here automatically, or tap + to add a task."
-                  : isPastDate
+                  : isReadOnlyDate
                     ? "No tasks were recorded for this day."
                     : "No tasks for this day."}
               </p>
@@ -231,14 +234,14 @@ export default function TasksPage() {
               tasks={tasks}
               canToggle={canToggleTask}
               onToggle={handleToggle}
-              onDelete={isPastDate ? undefined : handleDelete}
-              onUpdate={isPastDate ? undefined : handleUpdate}
-              onCreateSubtask={isPastDate ? undefined : handleCreateSubtask}
-              onToggleSubtask={isPastDate ? undefined : handleToggleSubtask}
-              onUpdateSubtask={isPastDate ? undefined : handleUpdateSubtask}
-              onDeleteSubtask={isPastDate ? undefined : handleDeleteSubtask}
+              onDelete={isReadOnlyDate ? undefined : handleDelete}
+              onUpdate={isReadOnlyDate ? undefined : handleUpdate}
+              onCreateSubtask={isReadOnlyDate ? undefined : handleCreateSubtask}
+              onToggleSubtask={isReadOnlyDate ? undefined : handleToggleSubtask}
+              onUpdateSubtask={isReadOnlyDate ? undefined : handleUpdateSubtask}
+              onDeleteSubtask={isReadOnlyDate ? undefined : handleDeleteSubtask}
               onReorder={handleReorder}
-              readOnly={isPastDate}
+              readOnly={isReadOnlyDate}
             />
           )}
         </div>

@@ -5,7 +5,10 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
-import { parseDateKey, todayDateKey } from '../common/date.utils';
+import {
+  isLoggableHabitDateKey,
+  parseDateKey,
+} from '../common/date.utils';
 import type { HabitFrequency } from '../habits/habit-schedule.types';
 import {
   habitAnchorDateKey,
@@ -22,9 +25,10 @@ export class HabitLogsService {
       throw new BadRequestException('Invalid date format');
     }
 
-    const today = todayDateKey();
-    if (dateStr !== today) {
-      throw new BadRequestException('You can only log habits for today');
+    if (!isLoggableHabitDateKey(dateStr)) {
+      throw new BadRequestException(
+        'You can only log habits for today or yesterday',
+      );
     }
 
     const habit = await this.prisma.habit.findUnique({
@@ -46,7 +50,7 @@ export class HabitLogsService {
     const anchorDateKey = habitAnchorDateKey(habit.createdAt);
 
     if (!isHabitDueOnDate(frequency, scheduleDays, dateStr, anchorDateKey)) {
-      throw new BadRequestException('This habit is not scheduled for today');
+      throw new BadRequestException('This habit is not scheduled for that day');
     }
 
     const completedDate = parseDateKey(dateStr);

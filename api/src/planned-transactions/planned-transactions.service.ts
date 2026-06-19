@@ -40,6 +40,8 @@ type PlannedWithWallets = Prisma.PlannedTransactionGetPayload<{
 
 @Injectable()
 export class PlannedTransactionsService {
+  private readonly materializeLocks = new Map<string, Promise<void>>();
+
   constructor(private readonly prisma: PrismaService) {}
 
   async findAll(userId: string) {
@@ -340,6 +342,22 @@ export class PlannedTransactionsService {
   }
 
   async materializeDue(userId: string) {
+    const pending = this.materializeLocks.get(userId);
+    const run = (pending ?? Promise.resolve()).then(() =>
+      this.runMaterializeDue(userId),
+    );
+    this.materializeLocks.set(userId, run);
+
+    try {
+      await run;
+    } finally {
+      if (this.materializeLocks.get(userId) === run) {
+        this.materializeLocks.delete(userId);
+      }
+    }
+  }
+
+  private async runMaterializeDue(userId: string) {
     const rules = await this.prisma.plannedTransaction.findMany({
       where: { userId, active: true },
       include: {
@@ -379,27 +397,50 @@ export class PlannedTransactionsService {
     }>,
     dueDate: string,
   ) {
-    await this.prisma.$transaction(async (prisma) => {
-      const transaction = await prisma.transaction.create({
-        data: {
-          userId,
-          type: rule.type,
-          amount: rule.amount,
-          date: parseDateKey(dueDate),
-          note: rule.note,
-          fromWalletId: rule.fromWalletId,
-          toWalletId: rule.toWalletId,
-        },
-      });
+    const dueDateValue = parseDateKey(dueDate);
 
-      await prisma.plannedOccurrence.create({
-        data: {
-          plannedTransactionId: rule.id,
-          dueDate: parseDateKey(dueDate),
-          transactionId: transaction.id,
-        },
+    try {
+      await this.prisma.$transaction(async (prisma) => {
+        const existing = await prisma.plannedOccurrence.findUnique({
+          where: {
+            plannedTransactionId_dueDate: {
+              plannedTransactionId: rule.id,
+              dueDate: dueDateValue,
+            },
+          },
+        });
+
+        if (existing) {
+          return;
+        }
+
+        const transaction = await prisma.transaction.create({
+          data: {
+            userId,
+            type: rule.type,
+            amount: rule.amount,
+            date: dueDateValue,
+            note: rule.note,
+            fromWalletId: rule.fromWalletId,
+            toWalletId: rule.toWalletId,
+          },
+        });
+
+        await prisma.plannedOccurrence.create({
+          data: {
+            plannedTransactionId: rule.id,
+            dueDate: dueDateValue,
+            transactionId: transaction.id,
+          },
+        });
       });
-    });
+    } catch (error) {
+      if (isUniqueConstraintError(error)) {
+        return;
+      }
+
+      throw error;
+    }
   }
 
   private validatePlannedDto(dto: CreatePlannedTransactionDto) {
@@ -698,4 +739,15 @@ export class PlannedTransactionsService {
       );
     }
   }
+}
+
+function isUniqueConstraintError(error: unknown): boolean {
+  return (
+    (error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002') ||
+    (typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      (error as { code: string }).code === 'P2002')
+  );
 }

@@ -21,6 +21,16 @@ export function todayDateKey(): string {
   return formatDateKey(new Date());
 }
 
+export function yesterdayDateKey(): string {
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  return formatDateKey(yesterday);
+}
+
+export function isLoggableHabitDateKey(dateKey: string): boolean {
+  return dateKey === todayDateKey() || dateKey === yesterdayDateKey();
+}
+
 export function todayDateKeyUtc(): string {
   return formatDateKeyUtc(new Date());
 }

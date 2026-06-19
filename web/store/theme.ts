@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { applyThemeCssVars, getBaseInverseColor } from "@/lib/theme-css";
 
 interface ThemeState {
   baseColor: string;
@@ -11,9 +12,7 @@ interface ThemeState {
 
 export const INVERSE_ACCENT_PRESET = "inverse" as const;
 
-export function getBaseInverseColor(baseColor: string): string {
-  return baseColor === "#ffffff" ? "#000000" : "#ffffff";
-}
+export { getBaseInverseColor } from "@/lib/theme-css";
 
 export function resolveAccentPreset(preset: string, baseColor: string): string {
   if (preset === INVERSE_ACCENT_PRESET) return getBaseInverseColor(baseColor);
@@ -54,24 +53,9 @@ function syncAccentForBaseChange(
   return normalizeAccentColor(accentColor, newBaseColor);
 }
 
-function applyCssVars(baseColor: string, accentColor: string) {
+function applyThemeToDocument(baseColor: string, accentColor: string) {
   if (typeof document === "undefined") return;
-  const root = document.documentElement;
-  root.style.setProperty("--color-base", baseColor);
-  root.style.setProperty("--color-inverse", baseColor === "#ffffff" ? "#000000" : "#ffffff");
-  root.style.setProperty("--color-accent", accentColor);
-  root.style.setProperty(
-    "--color-accent-glow",
-    `color-mix(in srgb, ${accentColor} 40%, transparent)`,
-  );
-  root.style.setProperty(
-    "--color-surface",
-    `color-mix(in srgb, ${baseColor} 5%, transparent)`,
-  );
-  root.style.setProperty(
-    "--color-border",
-    `color-mix(in srgb, ${baseColor} 15%, transparent)`,
-  );
+  applyThemeCssVars(document.documentElement, baseColor, accentColor);
 }
 
 export const useThemeStore = create<ThemeState>()(
@@ -86,20 +70,20 @@ export const useThemeStore = create<ThemeState>()(
             state.baseColor,
             baseColor,
           );
-          applyCssVars(baseColor, accentColor);
+          applyThemeToDocument(baseColor, accentColor);
           return { baseColor, accentColor };
         });
       },
       setAccentColor: (accentColor) => {
         set((state) => {
           const normalized = normalizeAccentColor(accentColor, state.baseColor);
-          applyCssVars(state.baseColor, normalized);
+          applyThemeToDocument(state.baseColor, normalized);
           return { accentColor: normalized };
         });
       },
       applyTheme: (baseColor, accentColor) => {
         const normalized = normalizeAccentColor(accentColor, baseColor);
-        applyCssVars(baseColor, normalized);
+        applyThemeToDocument(baseColor, normalized);
         set({ baseColor, accentColor: normalized });
       },
     }),
@@ -114,7 +98,6 @@ export const useThemeStore = create<ThemeState>()(
           if (accentColor !== state.accentColor) {
             state.accentColor = accentColor;
           }
-          applyCssVars(state.baseColor, accentColor);
         }
       },
     },
