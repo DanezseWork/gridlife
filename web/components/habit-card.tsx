@@ -6,7 +6,6 @@ import { HabitFrequencyBadge } from "@/components/habit-frequency-badge";
 import type { Habit } from "@/lib/api";
 import { getTodayKey } from "@/lib/dates";
 import { getHabitIconComponent } from "@/lib/habit-icons";
-import { isCompactHabitGrid } from "@/lib/habit-grid";
 import { getCellBackground, getDayProgress } from "@/lib/habit-progress";
 import { cn } from "@/lib/utils";
 
@@ -34,7 +33,7 @@ export function HabitCard({
   const todayKey = getTodayKey();
   const Icon = getHabitIconComponent(habit.icon);
   const todayProgress = getDayProgress(habit, todayKey);
-  const compactGrid = isCompactHabitGrid(weekCount);
+  const denseGrid = weekCount > 26;
   const isDueToday = todayProgress.due;
 
   const progressByDate = useMemo(() => {
@@ -184,21 +183,20 @@ export function HabitCard({
         aria-label={`Open calendar for ${habit.name}`}
         className="w-full text-left"
       >
-        <div
-          className={cn(
-            compactGrid && "-mx-1 overflow-x-auto pb-1 lg:mx-0 lg:overflow-visible",
-          )}
-        >
+        <div>
           <div
             className={cn(
-              compactGrid
-                ? "inline-grid gap-[2px] sm:gap-[3px]"
-                : "grid w-full gap-[3px] sm:gap-1",
+              "grid w-full",
+              denseGrid
+                ? "gap-px sm:gap-[2px]"
+                : weekCount <= 12
+                  ? "gap-[3px] sm:gap-1"
+                  : "gap-[2px] sm:gap-[3px]",
             )}
             style={{
               gridTemplateRows: "repeat(7, minmax(0, auto))",
               gridAutoFlow: "column",
-              gridAutoColumns: compactGrid ? "max-content" : "minmax(0, 1fr)",
+              gridAutoColumns: "minmax(0, 1fr)",
             }}
           >
             {weeks.map((week) =>
@@ -210,11 +208,12 @@ export function HabitCard({
                     key={date}
                     aria-hidden
                     className={cn(
-                      compactGrid
-                        ? "size-[10px] shrink-0 rounded-[2px] sm:size-[11px]"
+                      "aspect-square w-full min-w-0",
+                      denseGrid
+                        ? "rounded-[1px] sm:rounded-[2px]"
                         : weekCount <= 12
-                          ? "aspect-square w-full min-w-0 rounded-md"
-                          : "aspect-square w-full min-w-0 rounded-sm",
+                          ? "rounded-md"
+                          : "rounded-sm",
                       isToday &&
                         progress.due &&
                         !progress.completed &&
