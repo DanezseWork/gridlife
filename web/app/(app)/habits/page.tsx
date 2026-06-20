@@ -71,8 +71,10 @@ export default function HabitsPage() {
     [habits, todayKey],
   );
 
-  const loadHabits = useCallback(async () => {
-    setLoading(true);
+  const loadHabits = useCallback(async (options?: { silent?: boolean }) => {
+    if (!options?.silent) {
+      setLoading(true);
+    }
     try {
       const data = await api.getHabits();
       setHabits(data);
@@ -80,7 +82,9 @@ export default function HabitsPage() {
         current ? data.find((h) => h.id === current.id) ?? null : null,
       );
     } finally {
-      setLoading(false);
+      if (!options?.silent) {
+        setLoading(false);
+      }
     }
   }, []);
 
@@ -90,7 +94,7 @@ export default function HabitsPage() {
 
   async function handleToggleDate(habitId: string, dateKey: string) {
     await api.toggleHabit(habitId, dateKey);
-    await loadHabits();
+    await loadHabits({ silent: true });
   }
 
   async function handleCreate(form: NewHabitForm) {
@@ -105,7 +109,7 @@ export default function HabitsPage() {
       yearlyDays: form.frequency === "yearly" ? form.yearlyDays : undefined,
       intervalDays: form.frequency === "custom" ? form.intervalDays : undefined,
     });
-    await loadHabits();
+    await loadHabits({ silent: true });
   }
 
   async function handleUpdate(habitId: string, form: NewHabitForm) {
@@ -120,13 +124,13 @@ export default function HabitsPage() {
       yearlyDays: form.frequency === "yearly" ? form.yearlyDays : undefined,
       intervalDays: form.frequency === "custom" ? form.intervalDays : undefined,
     });
-    await loadHabits();
+    await loadHabits({ silent: true });
   }
 
   async function handleDelete(habitId: string) {
     await api.deleteHabit(habitId);
     setEditingHabit(null);
-    await loadHabits();
+    await loadHabits({ silent: true });
   }
 
   async function handleReorder(habitIds: string[]) {

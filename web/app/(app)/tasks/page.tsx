@@ -43,23 +43,31 @@ export default function TasksPage() {
     [tasks],
   );
 
-  const loadTasks = useCallback(async (date: string) => {
-    setLoadingTasks(true);
+  const loadTasks = useCallback(async (date: string, options?: { silent?: boolean }) => {
+    if (!options?.silent) {
+      setLoadingTasks(true);
+    }
     try {
       const data = await api.getTasks(date);
       setTasks(data);
     } finally {
-      setLoadingTasks(false);
+      if (!options?.silent) {
+        setLoadingTasks(false);
+      }
     }
   }, []);
 
-  const loadCalendar = useCallback(async (month: Date) => {
-    setLoadingCalendar(true);
+  const loadCalendar = useCallback(async (month: Date, options?: { silent?: boolean }) => {
+    if (!options?.silent) {
+      setLoadingCalendar(true);
+    }
     try {
       const data = await api.getTaskCalendar(monthKey(month));
       setCalendarDays(data);
     } finally {
-      setLoadingCalendar(false);
+      if (!options?.silent) {
+        setLoadingCalendar(false);
+      }
     }
   }, []);
 
@@ -74,8 +82,8 @@ export default function TasksPage() {
   async function handleToggle(taskId: string) {
     await api.toggleTask(taskId);
     await Promise.all([
-      loadTasks(selectedDate),
-      loadCalendar(viewMonth),
+      loadTasks(selectedDate, { silent: true }),
+      loadCalendar(viewMonth, { silent: true }),
     ]);
   }
 
@@ -86,16 +94,16 @@ export default function TasksPage() {
       date: selectedDate,
     });
     await Promise.all([
-      loadTasks(selectedDate),
-      loadCalendar(viewMonth),
+      loadTasks(selectedDate, { silent: true }),
+      loadCalendar(viewMonth, { silent: true }),
     ]);
   }
 
   async function handleDelete(taskId: string) {
     await api.deleteTask(taskId);
     await Promise.all([
-      loadTasks(selectedDate),
-      loadCalendar(viewMonth),
+      loadTasks(selectedDate, { silent: true }),
+      loadCalendar(viewMonth, { silent: true }),
     ]);
   }
 
@@ -107,24 +115,24 @@ export default function TasksPage() {
   async function handleCreateSubtask(taskId: string, title: string) {
     await api.createSubtask(taskId, title);
     await Promise.all([
-      loadTasks(selectedDate),
-      loadCalendar(viewMonth),
+      loadTasks(selectedDate, { silent: true }),
+      loadCalendar(viewMonth, { silent: true }),
     ]);
   }
 
   async function handleToggleSubtask(taskId: string, subtaskId: string) {
     await api.toggleSubtask(taskId, subtaskId);
     await Promise.all([
-      loadTasks(selectedDate),
-      loadCalendar(viewMonth),
+      loadTasks(selectedDate, { silent: true }),
+      loadCalendar(viewMonth, { silent: true }),
     ]);
   }
 
   async function handleDeleteSubtask(taskId: string, subtaskId: string) {
     await api.deleteSubtask(taskId, subtaskId);
     await Promise.all([
-      loadTasks(selectedDate),
-      loadCalendar(viewMonth),
+      loadTasks(selectedDate, { silent: true }),
+      loadCalendar(viewMonth, { silent: true }),
     ]);
   }
 
@@ -134,8 +142,8 @@ export default function TasksPage() {
   ) {
     await api.updateTask(taskId, data);
     await Promise.all([
-      loadTasks(selectedDate),
-      loadCalendar(viewMonth),
+      loadTasks(selectedDate, { silent: true }),
+      loadCalendar(viewMonth, { silent: true }),
     ]);
   }
 
@@ -146,8 +154,8 @@ export default function TasksPage() {
   ) {
     await api.updateSubtask(taskId, subtaskId, title);
     await Promise.all([
-      loadTasks(selectedDate),
-      loadCalendar(viewMonth),
+      loadTasks(selectedDate, { silent: true }),
+      loadCalendar(viewMonth, { silent: true }),
     ]);
   }
 
