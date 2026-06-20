@@ -174,7 +174,7 @@ Web: http://localhost:3001
 | Email | `demo@gridlife.app` |
 | Password | `password123` |
 
-Re-running `npm run prisma:seed` deletes and recreates the demo user with sample habits, wallets, transactions, and planned rules (no sample tasks).
+Re-running `npm run prisma:seed` deletes and recreates the demo user with sample habits (including completion history), tasks, wallets, transactions, and planned rules. On deploy, `deploy:prepare` runs the same seed so the live demo account stays fresh.
 
 ## Environment variables
 
