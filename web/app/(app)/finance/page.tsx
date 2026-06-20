@@ -132,8 +132,10 @@ export default function FinancePage() {
   const [overdraftConfirmOpen, setOverdraftConfirmOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
+  const loadData = useCallback(async (options?: { silent?: boolean }) => {
+    if (!options?.silent) {
+      setLoading(true);
+    }
     setLoadError(null);
     try {
       const [w, t, queue] = await Promise.all([
@@ -156,7 +158,9 @@ export default function FinancePage() {
           : "Failed to load finance data",
       );
     } finally {
-      setLoading(false);
+      if (!options?.silent) {
+        setLoading(false);
+      }
     }
   }, [fromWalletId, toWalletId]);
 
@@ -244,7 +248,7 @@ export default function FinancePage() {
       setNote("");
       setOverdraftConfirmOpen(false);
       setTxDialogOpen(false);
-      await loadData();
+      await loadData({ silent: true });
     } finally {
       setSubmitting(false);
     }
@@ -260,7 +264,7 @@ export default function FinancePage() {
 
   async function handleDeactivatePlanned(plannedTransactionId: string) {
     await api.updatePlannedTransaction(plannedTransactionId, { active: false });
-    await loadData();
+    await loadData({ silent: true });
   }
 
   async function handleCreateWallet(data: {
@@ -271,7 +275,7 @@ export default function FinancePage() {
     initialAmount?: number;
   }) {
     await api.createWallet(data);
-    await loadData();
+    await loadData({ silent: true });
   }
 
   async function handleUpdateWallet(
@@ -284,13 +288,13 @@ export default function FinancePage() {
     },
   ) {
     await api.updateWallet(walletId, data);
-    await loadData();
+    await loadData({ silent: true });
   }
 
   async function handleDeleteWallet(walletId: string) {
     await api.deleteWallet(walletId);
     setEditingWallet(null);
-    await loadData();
+    await loadData({ silent: true });
   }
 
   const today = getTodayKey();

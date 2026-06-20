@@ -119,7 +119,10 @@ export function NetworkPredictionChart({
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
+    const hasExistingData = data.length > 0;
+    if (!hasExistingData) {
+      setLoading(true);
+    }
     api
       .getNetworkProjection(range)
       .then((projection) => {
