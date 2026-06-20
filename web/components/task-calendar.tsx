@@ -51,7 +51,7 @@ function getCellStyle(total: number, completed: number, isSelected: boolean) {
   };
 }
 
-/** Text gradient mirrors the cell fill so each half contrasts with its background. */
+/** Solid date color — gradient text clipped to glyphs is unreliable in calendar cells. */
 function getDateTextStyle(
   total: number,
   completed: number,
@@ -70,12 +70,10 @@ function getDateTextStyle(
     return { color: "var(--color-inverse)" };
   }
 
-  const stop = `${ratio * 100}%`;
   return {
-    background: `linear-gradient(to top, var(--color-on-accent) ${stop}, var(--color-inverse) ${stop})`,
-    WebkitBackgroundClip: "text",
-    backgroundClip: "text",
-    color: "transparent",
+    color: "var(--color-inverse)",
+    textShadow:
+      "0 0 3px var(--color-base), 0 0 6px color-mix(in srgb, var(--color-base) 70%, transparent)",
   };
 }
 
@@ -209,7 +207,7 @@ export function TaskCalendar({
               )}
 
               <span
-                className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center text-sm font-medium"
+                className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center text-sm font-medium leading-none tabular-nums"
                 style={dateTextStyle}
               >
                 {day.getDate()}
