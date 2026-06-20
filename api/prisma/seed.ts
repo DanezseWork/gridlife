@@ -84,15 +84,21 @@ function buildHabitLogs(
   anchorDateKey: string,
   fromDate: Date,
   toDate: Date,
-  shouldComplete: (dateStr: string, dayIndex: number) => boolean,
+  todayKey: string,
+  shouldComplete: (
+    dateStr: string,
+    dueDayIndex: number,
+    daysFromToday: number,
+    dayOfWeek: number,
+  ) => boolean,
 ) {
   const logs: { habitId: string; completedDate: Date; count: number }[] = [];
-  let dayIndex = 0;
+  let dueDayIndex = 0;
 
   for (
     let cursor = new Date(fromDate);
     cursor <= toDate;
-    cursor = addDays(cursor, 1), dayIndex++
+    cursor = addDays(cursor, 1)
   ) {
     const key = dateKey(cursor);
     if (
@@ -101,16 +107,86 @@ function buildHabitLogs(
       continue;
     }
 
-    if (shouldComplete(key, dayIndex)) {
+    const daysFromToday = daysBetween(key, todayKey);
+    const dayOfWeek = parseDateKey(key).getUTCDay();
+
+    if (shouldComplete(key, dueDayIndex, daysFromToday, dayOfWeek)) {
       logs.push({
         habitId,
         completedDate: parseDateKey(key),
         count: 1,
       });
     }
+
+    dueDayIndex++;
   }
 
   return logs;
+}
+
+function mulberry32(seed: number): () => number {
+  let state = seed >>> 0;
+  return () => {
+    state = (state + 0x6d2b79f5) >>> 0;
+    let t = Math.imul(state ^ (state >>> 15), 1 | state);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+interface HabitCompletionProfile {
+  seed: number;
+  baseRate: number;
+  streakBoost?: number;
+  slumpRate?: number;
+  slumpDays?: [number, number];
+  weekendBoost?: number;
+}
+
+function createHabitCompleter(profile: HabitCompletionProfile) {
+  const rng = mulberry32(profile.seed);
+  let slumpDaysLeft = 0;
+  let completedPreviousDueDay = false;
+
+  return (
+    _dateStr: string,
+    _dueDayIndex: number,
+    _daysFromToday: number,
+    dayOfWeek: number,
+  ): boolean => {
+    if (slumpDaysLeft > 0) {
+      slumpDaysLeft--;
+      const completed = rng() < profile.baseRate * 0.2;
+      completedPreviousDueDay = completed;
+      return completed;
+    }
+
+    if (
+      profile.slumpRate &&
+      profile.slumpDays &&
+      rng() < profile.slumpRate
+    ) {
+      const [min, max] = profile.slumpDays;
+      slumpDaysLeft = min + Math.floor(rng() * (max - min + 1));
+      completedPreviousDueDay = false;
+      return false;
+    }
+
+    let rate = profile.baseRate;
+    if (completedPreviousDueDay && profile.streakBoost) {
+      rate += profile.streakBoost;
+    }
+    if (
+      profile.weekendBoost &&
+      (dayOfWeek === 0 || dayOfWeek === 6)
+    ) {
+      rate += profile.weekendBoost;
+    }
+
+    const completed = rng() < Math.min(rate, 0.97);
+    completedPreviousDueDay = completed;
+    return completed;
+  };
 }
 
 async function deleteDemoUser(userId: string) {
@@ -237,6 +313,36 @@ async function main() {
   const [morningRun, readDaily, gymSession, eveningJournal] = habits;
   const anchorDateKey = dateKey(habitCreatedAt);
 
+  const completeMorningRun = createHabitCompleter({
+    seed: 4101,
+    baseRate: 0.8,
+    streakBoost: 0.12,
+    slumpRate: 0.035,
+    slumpDays: [2, 4],
+  });
+  const completeReadDaily = createHabitCompleter({
+    seed: 4102,
+    baseRate: 0.66,
+    streakBoost: 0.14,
+    slumpRate: 0.05,
+    slumpDays: [3, 6],
+  });
+  const completeGymSession = createHabitCompleter({
+    seed: 4103,
+    baseRate: 0.74,
+    streakBoost: 0.1,
+    slumpRate: 0.06,
+    slumpDays: [1, 2],
+  });
+  const completeEveningJournal = createHabitCompleter({
+    seed: 4104,
+    baseRate: 0.62,
+    streakBoost: 0.13,
+    slumpRate: 0.045,
+    slumpDays: [2, 5],
+    weekendBoost: 0.12,
+  });
+
   const habitLogs = [
     ...buildHabitLogs(
       morningRun.id,
@@ -245,11 +351,11 @@ async function main() {
       anchorDateKey,
       habitStart,
       today,
-      (key, dayIndex) => {
-        const daysFromToday = daysBetween(key, todayKey);
-        if (daysFromToday <= 14) return true;
-        if (daysFromToday === 15) return false;
-        return dayIndex % 6 !== 0;
+      todayKey,
+      (_key, _dueDayIndex, daysFromToday, dayOfWeek) => {
+        if (daysFromToday <= 13) return true;
+        if (daysFromToday === 14) return false;
+        return completeMorningRun(_key, _dueDayIndex, daysFromToday, dayOfWeek);
       },
     ),
     ...buildHabitLogs(
@@ -259,11 +365,14 @@ async function main() {
       anchorDateKey,
       habitStart,
       today,
-      (key, dayIndex) => {
-        const daysFromToday = daysBetween(key, todayKey);
+      todayKey,
+      (_key, _dueDayIndex, daysFromToday, dayOfWeek) => {
         if (daysFromToday === 0 || daysFromToday === 1) return false;
-        if (daysFromToday <= 10) return true;
-        return dayIndex % 3 !== 0;
+        if (daysFromToday <= 11) {
+          if (daysFromToday === 5 || daysFromToday === 9) return false;
+          return true;
+        }
+        return completeReadDaily(_key, _dueDayIndex, daysFromToday, dayOfWeek);
       },
     ),
     ...buildHabitLogs(
@@ -273,11 +382,10 @@ async function main() {
       anchorDateKey,
       habitStart,
       today,
-      (key) => {
-        const daysFromToday = daysBetween(key, todayKey);
+      todayKey,
+      (_key, _dueDayIndex, daysFromToday, dayOfWeek) => {
         if (daysFromToday === 0) return false;
-        if (daysFromToday <= 21) return daysFromToday % 7 !== 4;
-        return daysBetween(key, todayKey) % 14 !== 7;
+        return completeGymSession(_key, _dueDayIndex, daysFromToday, dayOfWeek);
       },
     ),
     ...buildHabitLogs(
@@ -287,11 +395,15 @@ async function main() {
       anchorDateKey,
       habitStart,
       today,
-      (key, dayIndex) => {
-        const daysFromToday = daysBetween(key, todayKey);
+      todayKey,
+      (_key, _dueDayIndex, daysFromToday, dayOfWeek) => {
         if (daysFromToday === 0) return true;
-        if (daysFromToday <= 5) return daysFromToday % 2 === 0;
-        return dayIndex % 2 === 0;
+        return completeEveningJournal(
+          _key,
+          _dueDayIndex,
+          daysFromToday,
+          dayOfWeek,
+        );
       },
     ),
   ];
