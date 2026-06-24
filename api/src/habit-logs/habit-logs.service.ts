@@ -43,6 +43,10 @@ export class HabitLogsService {
       throw new ForbiddenException();
     }
 
+    if (!habit.trackingEnabled) {
+      throw new BadRequestException('Tracking is paused for this habit');
+    }
+
     const frequency = habit.frequency as HabitFrequency;
     const scheduleDays = isHabitScheduleDays(habit.scheduleDays)
       ? habit.scheduleDays

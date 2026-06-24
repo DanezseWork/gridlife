@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { HoloCard } from "@/components/holo-card";
 import { Input } from "@/components/ui/input";
+import { SelectPicker } from "@/components/select-picker";
 import {
   TablePagination,
   useTablePagination,
@@ -142,20 +143,19 @@ export function TransactionsTable({
           />
         </div>
 
-        <select
+        <SelectPicker
           value={walletFilter}
-          onChange={(e) => setWalletFilter(e.target.value)}
+          onChange={setWalletFilter}
           aria-label="Filter by wallet"
-          className="min-h-10 rounded-md border bg-transparent px-3 text-sm"
-          style={{ borderColor: "var(--color-border)" }}
-        >
-          <option value="">All wallets</option>
-          {wallets.map((wallet) => (
-            <option key={wallet.id} value={wallet.id}>
-              {wallet.name}
-            </option>
-          ))}
-        </select>
+          className="min-h-10 sm:min-h-10"
+          options={[
+            { value: "", label: "All wallets" },
+            ...wallets.map((wallet) => ({
+              value: wallet.id,
+              label: wallet.name,
+            })),
+          ]}
+        />
 
         {hasActiveFilters && (
           <button

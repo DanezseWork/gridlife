@@ -53,6 +53,7 @@ export class HabitsService {
         frequency,
         scheduleDays: scheduleDays ?? undefined,
         sortOrder,
+        trackingEnabled: dto.trackingEnabled ?? true,
       },
       include: { logs: true },
     });
@@ -118,6 +119,9 @@ export class HabitsService {
         }),
         ...(dto.archive === true && { archivedAt: new Date() }),
         ...(dto.archive === false && { archivedAt: null }),
+        ...(dto.trackingEnabled !== undefined && {
+          trackingEnabled: dto.trackingEnabled,
+        }),
       },
       include: { logs: true },
     });
@@ -203,6 +207,7 @@ export class HabitsService {
     frequency: string;
     scheduleDays: unknown;
     sortOrder: number;
+    trackingEnabled: boolean;
     createdAt: Date;
     logs: { id: string; completedDate: Date; count: number }[];
   }) {
@@ -222,6 +227,7 @@ export class HabitsService {
       scheduleDays,
       scheduleSummary: formatHabitScheduleSummary(frequency, scheduleDays),
       sortOrder: habit.sortOrder,
+      trackingEnabled: habit.trackingEnabled,
       createdAt: habit.createdAt,
       streak: computeHabitStreak(
         frequency,

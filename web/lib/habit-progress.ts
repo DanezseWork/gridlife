@@ -22,6 +22,21 @@ export function getLogForDate(
 }
 
 export function getDayProgress(habit: Habit, dateKey: string): DayProgress {
+  if (!habit.trackingEnabled) {
+    const log = getLogForDate(habit, dateKey);
+    const count = log?.count ?? 0;
+    const targetCount = habit.targetCount;
+    const ratio = targetCount > 0 ? Math.min(count / targetCount, 1) : 0;
+
+    return {
+      count,
+      targetCount,
+      ratio,
+      completed: count >= targetCount,
+      due: false,
+    };
+  }
+
   const scheduleDays = scheduleDaysFromHabit(habit.scheduleDays);
   const anchorDateKey = habitAnchorDateKey(habit.createdAt);
   const due = isHabitDueOnDate(

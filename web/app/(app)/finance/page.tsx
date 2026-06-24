@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SelectPicker } from "@/components/select-picker";
 import { api, ApiError, type PlannedQueueItem, type Transaction, type Wallet } from "@/lib/api";
 import { formatMoney, resolveCurrency } from "@/lib/currencies";
 import { getTodayKey, getTomorrowKey, parseDateKey } from "@/lib/dates";
@@ -498,37 +499,31 @@ export default function FinancePage() {
                 {(txType === "expense" || txType === "transfer") && (
                   <div className="space-y-2 sm:col-span-1">
                     <Label>From wallet</Label>
-                    <select
+                    <SelectPicker
                       value={fromWalletId}
-                      onChange={(e) => setFromWalletId(e.target.value)}
-                      className="w-full min-h-11 rounded-md border bg-transparent px-3 text-sm sm:min-h-12"
-                      style={{ borderColor: "var(--color-border)" }}
-                    >
-                      {wallets.map((w) => (
-                        <option key={w.id} value={w.id}>
-                          {w.name} ({resolveCurrency(w.currency)})
-                        </option>
-                      ))}
-                    </select>
+                      onChange={setFromWalletId}
+                      options={wallets.map((w) => ({
+                        value: w.id,
+                        label: `${w.name} (${resolveCurrency(w.currency)})`,
+                      }))}
+                    />
                   </div>
                 )}
 
                 {(txType === "income" || txType === "transfer") && (
                   <div className="space-y-2 sm:col-span-1">
                     <Label>To wallet</Label>
-                    <select
+                    <SelectPicker
                       value={txType === "transfer" ? effectiveToWalletId : toWalletId}
-                      onChange={(e) => setToWalletId(e.target.value)}
+                      onChange={setToWalletId}
                       disabled={txType === "transfer" && transferTargets.length === 0}
-                      className="w-full min-h-11 rounded-md border bg-transparent px-3 text-sm disabled:opacity-50 sm:min-h-12"
-                      style={{ borderColor: "var(--color-border)" }}
-                    >
-                      {(txType === "transfer" ? transferTargets : wallets).map((w) => (
-                        <option key={w.id} value={w.id}>
-                          {w.name} ({resolveCurrency(w.currency)})
-                        </option>
-                      ))}
-                    </select>
+                      options={(txType === "transfer" ? transferTargets : wallets).map(
+                        (w) => ({
+                          value: w.id,
+                          label: `${w.name} (${resolveCurrency(w.currency)})`,
+                        }),
+                      )}
+                    />
                   </div>
                 )}
               </div>

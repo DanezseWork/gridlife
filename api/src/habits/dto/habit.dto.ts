@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsArray,
+  IsBoolean,
   IsIn,
   IsInt,
   IsOptional,
@@ -117,6 +118,15 @@ export class CreateHabitDto {
   @Min(1)
   @Max(365)
   intervalDays?: number;
+
+  @ApiPropertyOptional({
+    description: 'Whether this habit is actively tracked on its schedule',
+    default: true,
+    example: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  trackingEnabled?: boolean;
 }
 
 export class UpdateHabitDto {
@@ -188,6 +198,14 @@ export class UpdateHabitDto {
   })
   @IsOptional()
   archive?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Enable or pause tracking for this habit',
+    example: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  trackingEnabled?: boolean;
 }
 
 export class ToggleHabitDto {

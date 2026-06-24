@@ -32,4 +32,9 @@ export function applyThemeCssVars(
     "--color-border",
     `color-mix(in srgb, ${inverse} 15%, transparent)`,
   );
+
+  const normalizedBase = baseColor.trim().toLowerCase();
+  const isLightBase =
+    normalizedBase === "#ffffff" || normalizedBase === "#fff";
+  root.style.setProperty("color-scheme", isLightBase ? "light" : "dark");
 }

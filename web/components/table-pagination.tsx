@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SelectPicker } from "@/components/select-picker";
 import { cn } from "@/lib/utils";
 
 export const DEFAULT_PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
@@ -82,19 +83,16 @@ export function TablePagination({
         </span>
         <label className="inline-flex items-center gap-2">
           <span>Rows</span>
-          <select
-            value={pageSize}
-            onChange={(e) => onPageSizeChange(Number(e.target.value))}
+          <SelectPicker
+            value={String(pageSize)}
+            onChange={(value) => onPageSizeChange(Number(value))}
             aria-label="Rows per page"
-            className="min-h-9 rounded-md border bg-transparent px-2 py-1 text-xs sm:text-sm"
-            style={{ borderColor: "var(--color-border)" }}
-          >
-            {pageSizeOptions.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
+            className="min-h-9 w-auto px-2 py-1 text-xs sm:min-h-9 sm:text-sm"
+            options={pageSizeOptions.map((option) => ({
+              value: String(option),
+              label: String(option),
+            }))}
+          />
         </label>
       </div>
 

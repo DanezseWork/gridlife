@@ -62,6 +62,7 @@ export function HabitCalendarDialog({
 
   const todayProgress = habit ? getDayProgress(habit, todayKey) : null;
   const isDueToday = todayProgress?.due ?? false;
+  const isTracking = habit?.trackingEnabled ?? true;
 
   if (!habit) return null;
 
@@ -80,12 +81,14 @@ export function HabitCalendarDialog({
             <HabitFrequencyBadge habit={habit} variant="full" />
           </DialogTitle>
           <p className="text-sm opacity-50">
-            {habit.streak > 0
+            {!isTracking
+              ? "Tracking paused — turn tracking back on to log progress"
+              : habit.streak > 0
               ? `${habit.streak} streak`
               : habit.targetCount > 1
                 ? `${habit.targetCount} taps per session`
                 : "Tap today to log this habit"}
-            {!isDueToday ? " · not due today" : ""}
+            {isTracking && !isDueToday ? " · not due today" : ""}
           </p>
         </DialogHeader>
 
@@ -129,7 +132,8 @@ export function HabitCalendarDialog({
               const isToday = dateKey === todayKey;
               const isYesterday = dateKey === yesterdayKey;
               const isFuture = dateKey > todayKey;
-              const canToggle = isLoggableHabitDateKey(dateKey) && progress.due;
+              const canToggle =
+                isTracking && isLoggableHabitDateKey(dateKey) && progress.due;
 
               return (
                 <button
@@ -183,7 +187,7 @@ export function HabitCalendarDialog({
           <div className="flex items-center justify-center gap-2">
             <button
               type="button"
-              disabled={!isDueToday}
+              disabled={!isDueToday || !isTracking}
               onClick={() => onToggleDate(habit.id, todayKey)}
               className={cn(
                 "flex h-12 w-12 items-center justify-center rounded-xl border-2 transition-transform active:scale-95 disabled:opacity-35",
@@ -207,7 +211,9 @@ export function HabitCalendarDialog({
           </div>
 
           <p className="text-center text-xs opacity-50">
-            {!isDueToday
+            {!isTracking
+              ? "Tracking is paused for this habit"
+              : !isDueToday
               ? "This habit is not scheduled for today"
               : todayProgress?.completed
                 ? "Completed today — tap to reset"

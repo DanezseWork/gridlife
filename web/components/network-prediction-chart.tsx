@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { HoloCard } from "@/components/holo-card";
+import { SelectPicker } from "@/components/select-picker";
 import {
   api,
   type NetworkProjectionPoint,
@@ -225,20 +226,17 @@ export function NetworkPredictionChart({
               className="h-9 w-20 rounded-md border border-[var(--color-border)] bg-transparent px-2 font-data tabular-nums"
             />
           </label>
-          <select
+          <SelectPicker
             value={range.unit}
-            onChange={(event) => {
-              const unit = event.target.value as ProjectionUnit;
-              applyCustomRange(unit, customCountInput);
+            onChange={(unit) => {
+              applyCustomRange(unit as ProjectionUnit, customCountInput);
             }}
-            className="h-9 rounded-md border border-[var(--color-border)] bg-transparent px-2 text-xs sm:text-sm"
-          >
-            {(Object.keys(UNIT_LABELS) as ProjectionUnit[]).map((unit) => (
-              <option key={unit} value={unit}>
-                {UNIT_LABELS[unit]}
-              </option>
-            ))}
-          </select>
+            className="h-9 min-h-9 px-2 text-xs sm:min-h-9 sm:text-sm"
+            options={(Object.keys(UNIT_LABELS) as ProjectionUnit[]).map((unit) => ({
+              value: unit,
+              label: UNIT_LABELS[unit],
+            }))}
+          />
         </div>
       )}
 

@@ -108,6 +108,7 @@ export default function HabitsPage() {
       monthlyDays: form.frequency === "monthly" ? form.monthlyDays : undefined,
       yearlyDays: form.frequency === "yearly" ? form.yearlyDays : undefined,
       intervalDays: form.frequency === "custom" ? form.intervalDays : undefined,
+      trackingEnabled: form.trackingEnabled,
     });
     await loadHabits({ silent: true });
   }
@@ -123,6 +124,7 @@ export default function HabitsPage() {
       monthlyDays: form.frequency === "monthly" ? form.monthlyDays : undefined,
       yearlyDays: form.frequency === "yearly" ? form.yearlyDays : undefined,
       intervalDays: form.frequency === "custom" ? form.intervalDays : undefined,
+      trackingEnabled: form.trackingEnabled,
     });
     await loadHabits({ silent: true });
   }
@@ -136,6 +138,20 @@ export default function HabitsPage() {
   async function handleReorder(habitIds: string[]) {
     const reordered = await api.reorderHabits(habitIds);
     setHabits(reordered);
+  }
+
+  async function handleTrackingChange(habitId: string, trackingEnabled: boolean) {
+    setHabits((current) =>
+      current.map((habit) =>
+        habit.id === habitId ? { ...habit, trackingEnabled } : habit,
+      ),
+    );
+    try {
+      await api.updateHabit(habitId, { trackingEnabled });
+      await loadHabits({ silent: true });
+    } catch {
+      await loadHabits({ silent: true });
+    }
   }
 
   return (
@@ -198,6 +214,7 @@ export default function HabitsPage() {
             onOpen={setCalendarHabit}
             onEdit={setEditingHabit}
             onToggleToday={(habitId) => handleToggleDate(habitId, todayKey)}
+            onTrackingChange={handleTrackingChange}
             onReorder={handleReorder}
           />
         )}

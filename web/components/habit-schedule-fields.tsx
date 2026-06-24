@@ -4,6 +4,7 @@ import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SelectPicker } from "@/components/select-picker";
 import type { HabitFrequency } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -146,22 +147,19 @@ export function HabitScheduleFields({
           <div className="space-y-2">
             {yearlyDays.map((entry, index) => (
               <div key={`${entry.month}-${entry.day}-${index}`} className="flex gap-2">
-                <select
-                  value={entry.month}
-                  onChange={(e) => {
+                <SelectPicker
+                  value={String(entry.month)}
+                  onChange={(month) => {
                     const next = [...yearlyDays];
-                    next[index] = { ...entry, month: Number(e.target.value) };
+                    next[index] = { ...entry, month: Number(month) };
                     onYearlyDaysChange(next);
                   }}
-                  className="min-h-11 flex-1 rounded-md border bg-transparent px-3 text-sm"
-                  style={{ borderColor: "var(--color-border)" }}
-                >
-                  {MONTHS.map((label, monthIndex) => (
-                    <option key={label} value={monthIndex + 1}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
+                  className="min-h-11 flex-1 sm:min-h-11"
+                  options={MONTHS.map((label, monthIndex) => ({
+                    value: String(monthIndex + 1),
+                    label,
+                  }))}
+                />
                 <Input
                   type="number"
                   min={1}

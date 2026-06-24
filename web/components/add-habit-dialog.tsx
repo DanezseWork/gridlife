@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { HabitFrequencyBadge } from "@/components/habit-frequency-badge";
 import { HabitScheduleFields } from "@/components/habit-schedule-fields";
 import { CollapsibleIconPicker } from "@/components/collapsible-icon-picker";
+import { ToggleSwitch } from "@/components/toggle-switch";
 import { HABIT_COLORS } from "@/lib/habit-colors";
 import { getOnAccentColor } from "@/lib/color-utils";
 import type { Habit, HabitFrequency } from "@/lib/api";
@@ -41,6 +42,7 @@ export interface NewHabitForm {
   monthlyDays: number[];
   yearlyDays: Array<{ month: number; day: number }>;
   intervalDays: number;
+  trackingEnabled: boolean;
 }
 
 interface AddHabitDialogProps {
@@ -73,6 +75,7 @@ function defaultForm(defaultColor: string): NewHabitForm {
       scheduleDays && "intervalDays" in scheduleDays
         ? scheduleDays.intervalDays
         : 3,
+    trackingEnabled: true,
   };
 }
 
@@ -94,6 +97,7 @@ function formFromHabit(habit: Habit): NewHabitForm {
       scheduleDays && "intervalDays" in scheduleDays
         ? scheduleDays.intervalDays
         : 3,
+    trackingEnabled: habit.trackingEnabled,
   };
 }
 
@@ -191,6 +195,7 @@ export function AddHabitDialog({
     scheduleDays: previewScheduleDays,
     scheduleSummary: previewSummary,
     sortOrder: 0,
+    trackingEnabled: form.trackingEnabled,
     createdAt: new Date().toISOString(),
     streak: 0,
     logs: [],
@@ -364,6 +369,32 @@ export function AddHabitDialog({
                   : "Partial fill until all taps done"}
               </span>
             </div>
+          </div>
+
+          <div
+            className="flex items-center justify-between rounded-xl px-3 py-3"
+            style={{
+              background:
+                "color-mix(in srgb, var(--color-inverse) 8%, var(--color-base))",
+              border:
+                "1px solid color-mix(in srgb, var(--color-inverse) 10%, transparent)",
+            }}
+          >
+            <div>
+              <p className="text-sm font-medium">Track this habit</p>
+              <p className="text-xs opacity-50">
+                {form.trackingEnabled
+                  ? "Shows on your schedule and tasks"
+                  : "Paused — history is kept but nothing is due"}
+              </p>
+            </div>
+            <ToggleSwitch
+              checked={form.trackingEnabled}
+              onCheckedChange={(trackingEnabled) =>
+                setForm((f) => ({ ...f, trackingEnabled }))
+              }
+              id="habit-tracking-enabled"
+            />
           </div>
 
           <button

@@ -3,6 +3,7 @@
 import { useMemo, type HTMLAttributes } from "react";
 import { Check, GripVertical, Pencil, Plus } from "lucide-react";
 import { HabitFrequencyBadge } from "@/components/habit-frequency-badge";
+import { ToggleSwitch } from "@/components/toggle-switch";
 import type { Habit } from "@/lib/api";
 import { getTodayKey } from "@/lib/dates";
 import { getHabitIconComponent } from "@/lib/habit-icons";
@@ -16,6 +17,7 @@ interface HabitCardProps {
   onOpen: (habit: Habit) => void;
   onEdit: (habit: Habit) => void;
   onToggleToday: (habitId: string) => void;
+  onTrackingChange: (habitId: string, trackingEnabled: boolean) => void;
   dragHandleProps?: HTMLAttributes<HTMLButtonElement>;
   isDragging?: boolean;
 }
@@ -27,6 +29,7 @@ export function HabitCard({
   onOpen,
   onEdit,
   onToggleToday,
+  onTrackingChange,
   dragHandleProps,
   isDragging = false,
 }: HabitCardProps) {
@@ -35,6 +38,7 @@ export function HabitCard({
   const todayProgress = getDayProgress(habit, todayKey);
   const denseGrid = weekCount > 26;
   const isDueToday = todayProgress.due;
+  const isTracking = habit.trackingEnabled;
 
   const progressByDate = useMemo(() => {
     const map = new Map<string, ReturnType<typeof getDayProgress>>();
@@ -47,6 +51,12 @@ export function HabitCard({
   }, [habit, weeks]);
 
   const subtitle = (() => {
+    if (!isTracking) {
+      return habit.streak > 0
+        ? `${habit.streak} streak · tracking paused`
+        : "Tracking paused";
+    }
+
     if (!isDueToday) {
       return habit.streak > 0
         ? `${habit.streak} streak · not due today`
@@ -72,7 +82,7 @@ export function HabitCard({
 
   return (
     <article
-      className={cn("rounded-2xl p-4 sm:p-5", isDragging && "shadow-lg")}
+      className={cn("rounded-2xl p-4 sm:p-5", isDragging && "shadow-lg", !isTracking && "opacity-75")}
       style={{
         background: "color-mix(in srgb, var(--color-inverse) 8%, var(--color-base))",
         border: "1px solid color-mix(in srgb, var(--color-inverse) 10%, transparent)",
@@ -114,6 +124,13 @@ export function HabitCard({
         </button>
 
         <div className="flex shrink-0 items-center gap-2">
+          <ToggleSwitch
+            checked={isTracking}
+            onCheckedChange={(checked) => onTrackingChange(habit.id, checked)}
+            label="Track"
+            id={`track-${habit.id}`}
+          />
+
           <button
             type="button"
             aria-label={`Edit ${habit.name}`}
@@ -129,9 +146,11 @@ export function HabitCard({
 
           <button
             type="button"
-            disabled={!isDueToday}
+            disabled={!isDueToday || !isTracking}
             aria-label={
-              !isDueToday
+              !isTracking
+                ? `${habit.name} tracking is paused`
+                : !isDueToday
                 ? `${habit.name} is not due today`
                 : todayProgress.completed
                   ? `Reset ${habit.name} for today`
@@ -140,8 +159,8 @@ export function HabitCard({
             onClick={() => onToggleToday(habit.id)}
             className={cn(
               "relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl transition-transform active:scale-95 sm:h-12 sm:w-12",
-              !todayProgress.completed && isDueToday && "border-2 bg-transparent",
-              !isDueToday && "opacity-35",
+              !todayProgress.completed && isDueToday && isTracking && "border-2 bg-transparent",
+              (!isDueToday || !isTracking) && "opacity-35",
             )}
             style={{
               background: todayProgress.completed ? habit.color : "transparent",
@@ -157,7 +176,11 @@ export function HabitCard({
                 }}
               />
             )}
-            {!isDueToday ? (
+            {!isTracking ? (
+              <span className="relative text-[10px] font-medium uppercase opacity-60">
+                Pause
+              </span>
+            ) : !isDueToday ? (
               <span className="relative text-[10px] font-medium uppercase opacity-60">
                 Off
               </span>
@@ -203,6 +226,7 @@ export function HabitCard({
               week.map((date) => {
                 const progress = progressByDate.get(date)!;
                 const isToday = date === todayKey;
+                const showProgress = isTracking ? progress.due : progress.ratio > 0;
                 return (
                   <div
                     key={date}
@@ -215,6 +239,7 @@ export function HabitCard({
                           ? "rounded-md"
                           : "rounded-sm",
                       isToday &&
+                        isTracking &&
                         progress.due &&
                         !progress.completed &&
                         "ring-1 ring-offset-1 ring-offset-transparent",
@@ -223,9 +248,9 @@ export function HabitCard({
                       background: getCellBackground(
                         habit.color,
                         progress.ratio,
-                        progress.due,
+                        showProgress,
                       ),
-                      ...(isToday && progress.due && !progress.completed
+                      ...(isToday && isTracking && progress.due && !progress.completed
                         ? { boxShadow: `0 0 0 1px ${habit.color}` }
                         : {}),
                     }}

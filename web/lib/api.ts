@@ -93,6 +93,7 @@ export interface Habit {
   scheduleDays: HabitScheduleDays;
   scheduleSummary: string;
   sortOrder: number;
+  trackingEnabled: boolean;
   createdAt: string;
   streak: number;
   logs: HabitLog[];
@@ -234,6 +235,7 @@ export const api = {
     monthlyDays?: number[];
     yearlyDays?: Array<{ month: number; day: number }>;
     intervalDays?: number;
+    trackingEnabled?: boolean;
   }) =>
     request<Habit>("/habits", {
       method: "POST",
@@ -253,6 +255,7 @@ export const api = {
       yearlyDays?: Array<{ month: number; day: number }>;
       intervalDays?: number;
       archive?: boolean;
+      trackingEnabled?: boolean;
     },
   ) =>
     request<Habit>(`/habits/${habitId}`, {

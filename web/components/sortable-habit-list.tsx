@@ -26,6 +26,7 @@ interface SortableHabitListProps {
   onOpen: (habit: Habit) => void;
   onEdit: (habit: Habit) => void;
   onToggleToday: (habitId: string) => void;
+  onTrackingChange: (habitId: string, trackingEnabled: boolean) => void;
   onReorder: (habitIds: string[]) => void;
 }
 
@@ -36,6 +37,7 @@ interface SortableHabitCardProps {
   onOpen: (habit: Habit) => void;
   onEdit: (habit: Habit) => void;
   onToggleToday: (habitId: string) => void;
+  onTrackingChange: (habitId: string, trackingEnabled: boolean) => void;
 }
 
 function SortableHabitCard({
@@ -45,6 +47,7 @@ function SortableHabitCard({
   onOpen,
   onEdit,
   onToggleToday,
+  onTrackingChange,
 }: SortableHabitCardProps) {
   const {
     attributes,
@@ -70,6 +73,7 @@ function SortableHabitCard({
         onOpen={onOpen}
         onEdit={onEdit}
         onToggleToday={onToggleToday}
+        onTrackingChange={onTrackingChange}
         dragHandleProps={{ ...attributes, ...listeners }}
         isDragging={isDragging}
       />
@@ -84,6 +88,7 @@ export function SortableHabitList({
   onOpen,
   onEdit,
   onToggleToday,
+  onTrackingChange,
   onReorder,
 }: SortableHabitListProps) {
   const sensors = useSensors(
@@ -129,6 +134,7 @@ export function SortableHabitList({
               onOpen={onOpen}
               onEdit={onEdit}
               onToggleToday={onToggleToday}
+              onTrackingChange={onTrackingChange}
             />
           ))}
         </div>

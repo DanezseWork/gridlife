@@ -31,9 +31,10 @@ model Habit {
   targetCount  Int        @default(1)
   frequency    String     @default("daily")
   scheduleDays Json?
-  sortOrder    Int        @default(0)
-  createdAt    DateTime   @default(now())
-  archivedAt   DateTime?
+  sortOrder        Int        @default(0)
+  trackingEnabled  Boolean    @default(true)
+  createdAt        DateTime   @default(now())
+  archivedAt       DateTime?
   logs         HabitLog[]
   tasks        Task[]
 }

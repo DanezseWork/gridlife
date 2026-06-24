@@ -153,6 +153,10 @@ export class TasksService {
       const completedHabits: Array<{ id: string; color: string }> = [];
 
       for (const habit of habits) {
+        if (!habit.trackingEnabled) {
+          continue;
+        }
+
         const frequency = habit.frequency as HabitFrequency;
         const scheduleDays = isHabitScheduleDays(habit.scheduleDays)
           ? habit.scheduleDays
@@ -442,6 +446,13 @@ export class TasksService {
     });
 
     for (const habit of habits) {
+      if (!habit.trackingEnabled) {
+        await this.prisma.task.deleteMany({
+          where: { habitId: habit.id, date },
+        });
+        continue;
+      }
+
       const frequency = habit.frequency as HabitFrequency;
       const scheduleDays = isHabitScheduleDays(habit.scheduleDays)
         ? habit.scheduleDays
