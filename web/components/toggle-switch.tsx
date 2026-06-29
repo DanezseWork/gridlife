@@ -9,6 +9,8 @@ interface ToggleSwitchProps {
   label?: string;
   id?: string;
   className?: string;
+  /** When set, used for the checked track background instead of the global accent color. */
+  color?: string;
 }
 
 export function ToggleSwitch({
@@ -18,6 +20,7 @@ export function ToggleSwitch({
   label,
   id,
   className,
+  color,
 }: ToggleSwitchProps) {
   return (
     <label
@@ -41,8 +44,10 @@ export function ToggleSwitch({
         onClick={() => onCheckedChange(!checked)}
         className={cn(
           "relative h-7 w-12 shrink-0 rounded-full transition-colors",
-          checked ? "bg-[var(--color-accent)]" : "bg-[var(--color-border)]",
+          !checked && "bg-[var(--color-border)]",
+          !color && checked && "bg-[var(--color-accent)]",
         )}
+        style={color && checked ? { background: color } : undefined}
       >
         <span
           aria-hidden

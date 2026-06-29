@@ -129,6 +129,7 @@ export function HabitCard({
             onCheckedChange={(checked) => onTrackingChange(habit.id, checked)}
             label="Track"
             id={`track-${habit.id}`}
+            color={habit.color}
           />
 
           <button
