@@ -33,7 +33,7 @@ export default function LoginPage() {
 
       await api.updateSettings({ baseColor, accentColor });
 
-      router.replace("/habits");
+      router.replace("/tasks");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {

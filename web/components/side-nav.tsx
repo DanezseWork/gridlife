@@ -7,8 +7,8 @@ import { GridlifeLogo } from "@/components/gridlife-logo";
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { href: "/habits", label: "Habits", icon: ListChecks },
   { href: "/tasks", label: "Tasks", icon: CheckSquare },
+  { href: "/habits", label: "Habits", icon: ListChecks },
   { href: "/finance", label: "Finance", icon: Wallet },
   { href: "/settings", label: "Settings", icon: Settings },
 ] as const;
