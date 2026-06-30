@@ -37,6 +37,8 @@ interface SortableTaskListProps {
     title: string,
   ) => Promise<void>;
   onDeleteSubtask?: (taskId: string, subtaskId: string) => Promise<void>;
+  onTransfer?: (taskId: string) => Promise<void>;
+  transferringTaskId?: string | null;
   onReorder: (taskIds: string[]) => void;
   readOnly?: boolean;
 }
@@ -58,6 +60,8 @@ interface SortableTaskListItemProps {
     title: string,
   ) => Promise<void>;
   onDeleteSubtask?: (taskId: string, subtaskId: string) => Promise<void>;
+  onTransfer?: (taskId: string) => Promise<void>;
+  transferringTaskId?: string | null;
   readOnly?: boolean;
 }
 
@@ -71,6 +75,8 @@ function SortableTaskListItem({
   onToggleSubtask,
   onUpdateSubtask,
   onDeleteSubtask,
+  onTransfer,
+  transferringTaskId,
   readOnly,
 }: SortableTaskListItemProps) {
   const {
@@ -100,6 +106,8 @@ function SortableTaskListItem({
         onToggleSubtask={onToggleSubtask}
         onUpdateSubtask={onUpdateSubtask}
         onDeleteSubtask={onDeleteSubtask}
+        onTransfer={onTransfer}
+        transferring={transferringTaskId === task.id}
         dragHandleProps={{ ...attributes, ...listeners }}
         isDragging={isDragging}
         readOnly={readOnly}
@@ -118,6 +126,8 @@ export function SortableTaskList({
   onToggleSubtask,
   onUpdateSubtask,
   onDeleteSubtask,
+  onTransfer,
+  transferringTaskId,
   onReorder,
   readOnly = false,
 }: SortableTaskListProps) {
@@ -189,6 +199,8 @@ export function SortableTaskList({
                     onToggleSubtask={onToggleSubtask}
                     onUpdateSubtask={onUpdateSubtask}
                     onDeleteSubtask={onDeleteSubtask}
+                    onTransfer={onTransfer}
+                    transferringTaskId={transferringTaskId}
                   />
                 ))}
               </SortableContext>

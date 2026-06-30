@@ -90,6 +90,13 @@ export class TasksController {
     return this.tasksService.toggle(user.id, id);
   }
 
+  @Post(':id/transfer-to-today')
+  @ApiOperation({ summary: 'Move a yesterday task to today' })
+  @ApiWrappedOkResponse('Transferred task')
+  transferToToday(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.tasksService.transferToToday(user.id, id);
+  }
+
   @Post(':id/subtasks')
   @ApiOperation({ summary: 'Add a subtask' })
   @ApiWrappedCreatedResponse('Created subtask')

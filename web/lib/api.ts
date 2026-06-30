@@ -325,6 +325,11 @@ export const api = {
       body: JSON.stringify({ date, taskIds }),
     }),
 
+  transferTaskToToday: (taskId: string) =>
+    request<Task>(`/tasks/${taskId}/transfer-to-today`, {
+      method: "POST",
+    }),
+
   createSubtask: (taskId: string, title: string) =>
     request<Subtask>(`/tasks/${taskId}/subtasks`, {
       method: "POST",

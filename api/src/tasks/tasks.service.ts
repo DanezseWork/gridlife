@@ -73,6 +73,36 @@ export class TasksService {
     );
   }
 
+  async transferToToday(userId: string, taskId: string) {
+    const task = await this.ensureStandaloneTask(userId, taskId);
+    const dateKey = formatDateKeyUtc(task.date);
+
+    if (dateKey !== yesterdayDateKey()) {
+      throw new BadRequestException(
+        'Only yesterday tasks can be transferred to today',
+      );
+    }
+
+    if (task.completedAt) {
+      throw new BadRequestException('Completed tasks cannot be transferred');
+    }
+
+    const todayKey = todayDateKey();
+    const todayDate = parseDateKey(todayKey);
+    const sortOrder = await this.nextSortOrder(userId, todayDate);
+
+    const updated = await this.prisma.task.update({
+      where: { id: task.id },
+      data: { date: todayDate, sortOrder },
+      include: {
+        subtasks: { orderBy: { sortOrder: 'asc' } },
+        habit: { include: { logs: true } },
+      },
+    });
+
+    return this.toTaskResponse(updated, todayKey);
+  }
+
   async reorder(userId: string, dateKey: string, taskIds: string[]) {
     this.assertDateEditable(dateKey);
     await this.syncHabitTasksForDate(userId, dateKey);

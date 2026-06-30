@@ -37,6 +37,9 @@ export default function TasksPage() {
   const [loadingTasks, setLoadingTasks] = useState(true);
   const [loadingCalendar, setLoadingCalendar] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [transferringTaskId, setTransferringTaskId] = useState<string | null>(
+    null,
+  );
 
   const completedCount = useMemo(
     () => tasks.filter((task) => task.completed).length,
@@ -112,6 +115,19 @@ export default function TasksPage() {
     setTasks(reordered);
   }
 
+  async function handleTransferToToday(taskId: string) {
+    setTransferringTaskId(taskId);
+    try {
+      await api.transferTaskToToday(taskId);
+      await Promise.all([
+        loadTasks(selectedDate, { silent: true }),
+        loadCalendar(viewMonth, { silent: true }),
+      ]);
+    } finally {
+      setTransferringTaskId(null);
+    }
+  }
+
   async function handleCreateSubtask(taskId: string, title: string) {
     await api.createSubtask(taskId, title);
     await Promise.all([
@@ -167,6 +183,7 @@ export default function TasksPage() {
 
   const isReadOnlyDate = isReadOnlyTaskDateKey(selectedDate);
   const isPastDate = isPastDateKey(selectedDate);
+  const isYesterday = selectedDate === getYesterdayKey();
 
   const canToggleTask = (task: Task) => {
     if (isReadOnlyDate) return false;
@@ -248,6 +265,8 @@ export default function TasksPage() {
               onToggleSubtask={isReadOnlyDate ? undefined : handleToggleSubtask}
               onUpdateSubtask={isReadOnlyDate ? undefined : handleUpdateSubtask}
               onDeleteSubtask={isReadOnlyDate ? undefined : handleDeleteSubtask}
+              onTransfer={isYesterday ? handleTransferToToday : undefined}
+              transferringTaskId={transferringTaskId}
               onReorder={handleReorder}
               readOnly={isReadOnlyDate}
             />

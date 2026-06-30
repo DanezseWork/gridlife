@@ -211,6 +211,7 @@ async function main() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const todayKey = dateKey(today);
+  const yesterdayKey = dateKey(addDays(today, -1));
   const habitStart = addDays(today, -84);
 
   const existing = await prisma.user.findUnique({
@@ -684,16 +685,37 @@ async function main() {
       {
         userId: user.id,
         title: 'Submit expense report',
-        date: parseDateKey(dateKey(addDays(today, -1))),
+        date: parseDateKey(yesterdayKey),
         sortOrder: 0,
         completedAt: new Date(),
       },
       {
         userId: user.id,
         title: 'Pack gym bag for Friday session',
-        date: parseDateKey(dateKey(addDays(today, -1))),
+        date: parseDateKey(yesterdayKey),
         sortOrder: 1,
         completedAt: new Date(),
+      },
+      {
+        userId: user.id,
+        title: 'Call insurance about claim status',
+        details: 'Reference #48291 — follow up on missing documents.',
+        date: parseDateKey(yesterdayKey),
+        sortOrder: 2,
+      },
+      {
+        userId: user.id,
+        title: 'Review PR feedback on auth module',
+        details: 'Address comments on JWT refresh and error handling.',
+        date: parseDateKey(yesterdayKey),
+        sortOrder: 3,
+      },
+      {
+        userId: user.id,
+        title: 'Buy birthday gift for Alex',
+        details: 'Bookstore voucher or vinyl — decide by end of week.',
+        date: parseDateKey(yesterdayKey),
+        sortOrder: 4,
       },
       {
         userId: user.id,
@@ -730,7 +752,8 @@ async function main() {
   console.log('Demo data includes:');
   console.log('- 4 habits with 12 weeks of completion history');
   console.log(`- ${habitLogs.length} habit log entries`);
-  console.log('- 9 standalone tasks (today, yesterday, past, and upcoming)');
+  console.log('- 12 standalone tasks (today, yesterday, past, and upcoming)');
+  console.log('- 3 incomplete tasks on yesterday (for transfer-to-today testing)');
   console.log('- 1 demo prep task with 4 subtasks (2 complete)');
   console.log('- 3 wallets (PHP cash/savings + USD travel)');
   console.log('- 19 historical transactions');

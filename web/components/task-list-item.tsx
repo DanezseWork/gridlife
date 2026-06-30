@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, GripVertical, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Check, GripVertical, Pencil, Plus, Trash2, X, ArrowRight } from "lucide-react";
 import { EditTaskDialog, type EditTaskForm } from "@/components/edit-task-dialog";
 import { getHabitIconComponent } from "@/lib/habit-icons";
 import type { Subtask, Task } from "@/lib/api";
@@ -31,6 +31,8 @@ interface TaskListItemProps {
     title: string,
   ) => Promise<void>;
   onDeleteSubtask?: (taskId: string, subtaskId: string) => Promise<void>;
+  onTransfer?: (taskId: string) => Promise<void>;
+  transferring?: boolean;
   dragHandleProps?: React.HTMLAttributes<HTMLButtonElement>;
   isDragging?: boolean;
   readOnly?: boolean;
@@ -186,6 +188,8 @@ export function TaskListItem({
   onToggleSubtask,
   onUpdateSubtask,
   onDeleteSubtask,
+  onTransfer,
+  transferring = false,
   dragHandleProps,
   isDragging,
   readOnly = false,
@@ -474,9 +478,23 @@ export function TaskListItem({
           )}
         </div>
 
-        {canModifyTask && (onUpdate || onDelete) && (
+        {(canModifyTask && (onUpdate || onDelete)) ||
+        (onTransfer && !task.habitId && !task.completed) ? (
           <div className="flex shrink-0 items-center">
-            {onUpdate && (
+            {onTransfer && !task.habitId && !task.completed && (
+              <button
+                type="button"
+                aria-label="Transfer to today"
+                title="Transfer to today"
+                disabled={transferring}
+                onClick={() => onTransfer(task.id)}
+                className="flex h-8 w-8 items-center justify-center rounded-lg opacity-40 transition-opacity hover:opacity-100 active:scale-95 disabled:opacity-25"
+                style={{ color: "var(--color-accent)" }}
+              >
+                <ArrowRight className="h-4 w-4" />
+              </button>
+            )}
+            {canModifyTask && onUpdate && (
               <button
                 type="button"
                 aria-label="Edit task"
@@ -486,7 +504,7 @@ export function TaskListItem({
                 <Pencil className="h-4 w-4" />
               </button>
             )}
-            {onDelete && (
+            {canModifyTask && onDelete && (
               <button
                 type="button"
                 aria-label="Delete task"
@@ -497,7 +515,7 @@ export function TaskListItem({
               </button>
             )}
           </div>
-        )}
+        ) : null}
       </article>
 
       {onUpdate && (
