@@ -24,6 +24,7 @@ async function request<T>(
   const token = getToken();
   const headers: HeadersInit = {
     "Content-Type": "application/json",
+    "X-Timezone-Offset": String(new Date().getTimezoneOffset()),
     ...(options.headers ?? {}),
   };
 

@@ -9,6 +9,7 @@ async function bootstrap() {
   app.enableCors({
     origin: process.env.CORS_ORIGIN ?? 'http://localhost:3001',
     credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Timezone-Offset'],
   });
 
   app.useGlobalPipes(

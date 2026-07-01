@@ -1,3 +1,5 @@
+import { getTimezoneOffsetMinutes } from './timezone/timezone.context';
+
 export function formatDateKey(date: Date): string {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -17,14 +19,25 @@ export function formatDateKeyUtc(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
-export function todayDateKey(): string {
-  return formatDateKey(new Date());
+function dateKeyForInstant(
+  instant: Date,
+  timezoneOffsetMinutes = getTimezoneOffsetMinutes(),
+): string {
+  const localMs = instant.getTime() - timezoneOffsetMinutes * 60_000;
+  return formatDateKeyUtc(new Date(localMs));
 }
 
-export function yesterdayDateKey(): string {
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  return formatDateKey(yesterday);
+export function addDaysToDateKey(dateKey: string, days: number): string {
+  const [y, m, d] = dateKey.split('-').map(Number);
+  return formatDateKeyUtc(new Date(Date.UTC(y, m - 1, d + days)));
+}
+
+export function todayDateKey(timezoneOffsetMinutes?: number): string {
+  return dateKeyForInstant(new Date(), timezoneOffsetMinutes);
+}
+
+export function yesterdayDateKey(timezoneOffsetMinutes?: number): string {
+  return addDaysToDateKey(todayDateKey(timezoneOffsetMinutes), -1);
 }
 
 export function isLoggableHabitDateKey(dateKey: string): boolean {
