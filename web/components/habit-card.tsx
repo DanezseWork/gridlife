@@ -7,7 +7,7 @@ import { ToggleSwitch } from "@/components/toggle-switch";
 import type { Habit } from "@/lib/api";
 import { getTodayKey } from "@/lib/dates";
 import { getHabitIconComponent } from "@/lib/habit-icons";
-import { getCellBackground, getDayProgress } from "@/lib/habit-progress";
+import { getCellBackground, getDayProgress, getManualCellOutline, getSkippedCellBackground } from "@/lib/habit-progress";
 import { cn } from "@/lib/utils";
 
 interface HabitCardProps {
@@ -37,8 +37,9 @@ export function HabitCard({
   const Icon = getHabitIconComponent(habit.icon);
   const todayProgress = getDayProgress(habit, todayKey);
   const denseGrid = weekCount > 26;
-  const isDueToday = todayProgress.due;
   const isTracking = habit.trackingEnabled;
+  const isDueToday = todayProgress.due;
+  const isSkippedToday = todayProgress.skipped && todayProgress.scheduled;
 
   const progressByDate = useMemo(() => {
     const map = new Map<string, ReturnType<typeof getDayProgress>>();
@@ -57,10 +58,24 @@ export function HabitCard({
         : "Tracking paused";
     }
 
-    if (!isDueToday) {
+    if (todayProgress.skipped && todayProgress.scheduled) {
+      return "Skipped today · open calendar to restore";
+    }
+
+    if (!todayProgress.due) {
+      if (todayProgress.scheduled) {
+        return habit.streak > 0
+          ? `${habit.streak} streak · skipped today`
+          : "Skipped today";
+      }
+
       return habit.streak > 0
-        ? `${habit.streak} streak · not due today`
-        : "Not due today";
+        ? `${habit.streak} streak · not on tasks today`
+        : "Not on tasks today";
+    }
+
+    if (todayProgress.manuallyAdded && !todayProgress.scheduled) {
+      return "Added to today's tasks";
     }
 
     if (habit.streak > 0) {
@@ -151,11 +166,13 @@ export function HabitCard({
             aria-label={
               !isTracking
                 ? `${habit.name} tracking is paused`
-                : !isDueToday
-                ? `${habit.name} is not due today`
-                : todayProgress.completed
-                  ? `Reset ${habit.name} for today`
-                  : `Log progress for ${habit.name}`
+                : isSkippedToday
+                  ? `${habit.name} is skipped today`
+                  : !isDueToday
+                    ? `${habit.name} is not on tasks today`
+                    : todayProgress.completed
+                      ? `Reset ${habit.name} for today`
+                      : `Log progress for ${habit.name}`
             }
             onClick={() => onToggleToday(habit.id)}
             className={cn(
@@ -180,6 +197,10 @@ export function HabitCard({
             {!isTracking ? (
               <span className="relative text-[10px] font-medium uppercase opacity-60">
                 Pause
+              </span>
+            ) : isSkippedToday ? (
+              <span className="relative text-[10px] font-medium uppercase opacity-60">
+                Skip
               </span>
             ) : !isDueToday ? (
               <span className="relative text-[10px] font-medium uppercase opacity-60">
@@ -227,7 +248,11 @@ export function HabitCard({
               week.map((date) => {
                 const progress = progressByDate.get(date)!;
                 const isToday = date === todayKey;
-                const showProgress = isTracking ? progress.due : progress.ratio > 0;
+                const isSkipped = progress.skipped && progress.scheduled;
+                const showProgress = isTracking
+                  ? progress.due
+                  : progress.ratio > 0;
+
                 return (
                   <div
                     key={date}
@@ -246,11 +271,18 @@ export function HabitCard({
                         "ring-1 ring-offset-1 ring-offset-transparent",
                     )}
                     style={{
-                      background: getCellBackground(
-                        habit.color,
-                        progress.ratio,
-                        showProgress,
-                      ),
+                      background: isSkipped
+                        ? getSkippedCellBackground(habit.color)
+                        : getCellBackground(
+                            habit.color,
+                            progress.ratio,
+                            showProgress,
+                          ),
+                      ...(progress.manuallyAdded &&
+                      !progress.scheduled &&
+                      isTracking
+                        ? { outline: getManualCellOutline(habit.color) }
+                        : {}),
                       ...(isToday && isTracking && progress.due && !progress.completed
                         ? { boxShadow: `0 0 0 1px ${habit.color}` }
                         : {}),

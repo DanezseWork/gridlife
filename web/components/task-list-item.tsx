@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, GripVertical, Pencil, Plus, Trash2, X, ArrowRight } from "lucide-react";
+import { Check, GripVertical, Pencil, Plus, Trash2, X, ArrowRight, EyeOff } from "lucide-react";
 import { EditTaskDialog, type EditTaskForm } from "@/components/edit-task-dialog";
 import { getHabitIconComponent } from "@/lib/habit-icons";
 import type { Subtask, Task } from "@/lib/api";
@@ -19,6 +19,8 @@ interface TaskListItemProps {
   canToggle: boolean;
   onToggle: (taskId: string) => void;
   onDelete?: (taskId: string) => void;
+  onUntrack?: (taskId: string) => void;
+  allowHabitUntrack?: boolean;
   onUpdate?: (
     taskId: string,
     data: { title: string; details?: string },
@@ -183,6 +185,8 @@ export function TaskListItem({
   canToggle,
   onToggle,
   onDelete,
+  onUntrack,
+  allowHabitUntrack = false,
   onUpdate,
   onCreateSubtask,
   onToggleSubtask,
@@ -205,6 +209,9 @@ export function TaskListItem({
     task.habit && !task.completed && habitCount > 0,
   );
   const canModifyTask = !readOnly && !task.habitId && !task.completed;
+  const canDeleteTask = canModifyTask;
+  const canUntrackHabit =
+    !readOnly && Boolean(task.habitId) && allowHabitUntrack && Boolean(onUntrack);
   const canManageSubtasks =
     canModifyTask && onCreateSubtask && onToggleSubtask;
   const hasSubtasks = task.subtasks.length > 0;
@@ -479,6 +486,7 @@ export function TaskListItem({
         </div>
 
         {(canModifyTask && (onUpdate || onDelete)) ||
+        canUntrackHabit ||
         (onTransfer && !task.habitId && !task.completed) ? (
           <div className="flex shrink-0 items-center">
             {onTransfer && !task.habitId && !task.completed && (
@@ -504,7 +512,18 @@ export function TaskListItem({
                 <Pencil className="h-4 w-4" />
               </button>
             )}
-            {canModifyTask && onDelete && (
+            {canUntrackHabit && (
+              <button
+                type="button"
+                aria-label="Untrack habit for this day"
+                title="Remove from this day"
+                onClick={() => onUntrack!(task.id)}
+                className="flex h-8 w-8 items-center justify-center rounded-lg opacity-40 transition-opacity hover:opacity-100 active:scale-95"
+              >
+                <EyeOff className="h-4 w-4" />
+              </button>
+            )}
+            {canDeleteTask && onDelete && (
               <button
                 type="button"
                 aria-label="Delete task"

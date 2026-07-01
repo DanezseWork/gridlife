@@ -37,6 +37,18 @@ model Habit {
   archivedAt       DateTime?
   logs         HabitLog[]
   tasks        Task[]
+  daySkips     HabitDaySkip[]
+}
+
+model HabitDaySkip {
+  id        String   @id @default(uuid())
+  habitId   String
+  habit     Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  date      DateTime @db.Date
+  createdAt DateTime @default(now())
+
+  @@unique([habitId, date])
+  @@index([date])
 }
 
 model Task {
@@ -47,10 +59,11 @@ model Task {
   details     String?
   date        DateTime  @db.Date
   completedAt DateTime?
-  habitId     String?
-  habit       Habit?    @relation(fields: [habitId], references: [id], onDelete: Cascade)
-  sortOrder   Int       @default(0)
-  createdAt   DateTime  @default(now())
+  habitId       String?
+  habit         Habit?    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  manuallyAdded Boolean   @default(false)
+  sortOrder     Int       @default(0)
+  createdAt     DateTime  @default(now())
   subtasks    Subtask[]
 
   @@unique([habitId, date])

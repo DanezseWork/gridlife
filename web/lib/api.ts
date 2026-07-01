@@ -97,6 +97,8 @@ export interface Habit {
   createdAt: string;
   streak: number;
   logs: HabitLog[];
+  skippedDates: string[];
+  manuallyAddedDates: string[];
 }
 
 export interface TaskHabit {
@@ -123,9 +125,18 @@ export interface Task {
   completed: boolean;
   sortOrder: number;
   habitId: string | null;
+  manuallyAdded: boolean;
   habit: TaskHabit | null;
   subtasks: Subtask[];
   createdAt: string;
+}
+
+export interface AvailableHabit {
+  id: string;
+  name: string;
+  color: string;
+  icon: string;
+  scheduleSummary: string;
 }
 
 export interface TaskCalendarDay {
@@ -280,6 +291,18 @@ export const api = {
       body: JSON.stringify({ date }),
     }),
 
+  skipHabitDay: (habitId: string, date: string) =>
+    request<void>(`/habits/${habitId}/skip-day`, {
+      method: "POST",
+      body: JSON.stringify({ date }),
+    }),
+
+  restoreHabitDay: (habitId: string, date: string) =>
+    request<void>(`/habits/${habitId}/restore-day`, {
+      method: "POST",
+      body: JSON.stringify({ date }),
+    }),
+
   reorderHabits: (habitIds: string[]) =>
     request<Habit[]>("/habits/reorder", {
       method: "POST",
@@ -296,6 +319,17 @@ export const api = {
 
   createTask: (data: { title: string; details?: string; date: string }) =>
     request<Task>("/tasks", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  getAvailableHabits: (date: string) =>
+    request<AvailableHabit[]>(
+      `/tasks/available-habits?date=${encodeURIComponent(date)}`,
+    ),
+
+  createHabitTask: (data: { habitId: string; date: string }) =>
+    request<Task>("/tasks/habit", {
       method: "POST",
       body: JSON.stringify(data),
     }),
@@ -317,6 +351,11 @@ export const api = {
   deleteTask: (taskId: string) =>
     request<void>(`/tasks/${taskId}`, {
       method: "DELETE",
+    }),
+
+  untrackHabitTask: (taskId: string) =>
+    request<void>(`/tasks/${taskId}/untrack`, {
+      method: "POST",
     }),
 
   reorderTasks: (date: string, taskIds: string[]) =>

@@ -42,6 +42,7 @@ type TaskWithHabit = {
   date: Date;
   completedAt: Date | null;
   habitId: string | null;
+  manuallyAdded: boolean;
   sortOrder: number;
   createdAt: Date;
   subtasks: SubtaskRecord[];
@@ -159,6 +160,43 @@ export class TasksService {
       },
     });
 
+    const habitTasks = await this.prisma.task.findMany({
+      where: {
+        userId,
+        habitId: { not: null },
+        date: { gte: start, lte: end },
+      },
+      include: {
+        habit: {
+          include: {
+            logs: {
+              where: {
+                completedDate: {
+                  gte: start,
+                  lte: end,
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const habitDaySkips = await this.prisma.habitDaySkip.findMany({
+      where: {
+        habit: { userId },
+        date: { gte: start, lte: end },
+      },
+    });
+
+    const skippedHabitsByDate = new Map<string, Set<string>>();
+    for (const skip of habitDaySkips) {
+      const dateKey = formatDateKeyUtc(skip.date);
+      const skipped = skippedHabitsByDate.get(dateKey) ?? new Set<string>();
+      skipped.add(skip.habitId);
+      skippedHabitsByDate.set(dateKey, skipped);
+    }
+
     const standaloneTasks = await this.prisma.task.findMany({
       where: {
         userId,
@@ -177,13 +215,19 @@ export class TasksService {
     for (let day = 1; day <= daysInMonth; day++) {
       const date = new Date(Date.UTC(year, month - 1, day));
       const dateKey = formatDateKeyUtc(date);
+      const skippedHabitIds = skippedHabitsByDate.get(dateKey) ?? new Set<string>();
 
       let total = 0;
       let completed = 0;
       const completedHabits: Array<{ id: string; color: string }> = [];
+      const countedHabitIds = new Set<string>();
 
       for (const habit of habits) {
         if (!habit.trackingEnabled) {
+          continue;
+        }
+
+        if (skippedHabitIds.has(habit.id)) {
           continue;
         }
 
@@ -199,6 +243,7 @@ export class TasksService {
           continue;
         }
 
+        countedHabitIds.add(habit.id);
         total += 1;
         const log = habit.logs.find(
           (entry) => formatDateKeyUtc(entry.completedDate) === dateKey,
@@ -206,6 +251,22 @@ export class TasksService {
         if (log && log.count >= habit.targetCount) {
           completed += 1;
           completedHabits.push({ id: habit.id, color: habit.color });
+        }
+      }
+
+      for (const task of habitTasks) {
+        if (formatDateKeyUtc(task.date) !== dateKey || !task.habit) continue;
+        if (countedHabitIds.has(task.habit.id)) continue;
+        if (!task.habit.trackingEnabled) continue;
+
+        countedHabitIds.add(task.habit.id);
+        total += 1;
+        const log = task.habit.logs.find(
+          (entry) => formatDateKeyUtc(entry.completedDate) === dateKey,
+        );
+        if (log && log.count >= task.habit.targetCount) {
+          completed += 1;
+          completedHabits.push({ id: task.habit.id, color: task.habit.color });
         }
       }
 
@@ -219,6 +280,115 @@ export class TasksService {
     }
 
     return days;
+  }
+
+  async findAvailableHabits(userId: string, dateKey: string) {
+    await this.syncHabitTasksForDate(userId, dateKey);
+    const date = parseDateKey(dateKey);
+
+    const existingHabitIds = await this.prisma.task.findMany({
+      where: { userId, date, habitId: { not: null } },
+      select: { habitId: true },
+    });
+    const onDay = new Set(
+      existingHabitIds
+        .map((task) => task.habitId)
+        .filter((id): id is string => id !== null),
+    );
+
+    const habits = await this.prisma.habit.findMany({
+      where: {
+        userId,
+        archivedAt: null,
+        trackingEnabled: true,
+        id: { notIn: [...onDay] },
+      },
+      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+    });
+
+    return habits.map((habit) => {
+      const frequency = habit.frequency as HabitFrequency;
+      const scheduleDays = isHabitScheduleDays(habit.scheduleDays)
+        ? habit.scheduleDays
+        : null;
+
+      return {
+        id: habit.id,
+        name: habit.name,
+        color: habit.color,
+        icon: habit.icon,
+        scheduleSummary: formatHabitScheduleSummary(frequency, scheduleDays),
+      };
+    });
+  }
+
+  async createHabitTask(userId: string, habitId: string, dateKey: string) {
+    this.assertDateNotPast(dateKey);
+    const date = parseDateKey(dateKey);
+
+    const habit = await this.prisma.habit.findUnique({
+      where: { id: habitId },
+    });
+
+    if (!habit || habit.archivedAt) {
+      throw new NotFoundException('Habit not found');
+    }
+
+    if (habit.userId !== userId) {
+      throw new ForbiddenException();
+    }
+
+    if (!habit.trackingEnabled) {
+      throw new BadRequestException('Tracking is paused for this habit');
+    }
+
+    const existing = await this.prisma.task.findUnique({
+      where: {
+        habitId_date: {
+          habitId,
+          date,
+        },
+      },
+    });
+
+    if (existing) {
+      throw new BadRequestException('This habit is already on that day');
+    }
+
+    await this.prisma.habitDaySkip.deleteMany({
+      where: { habitId, date },
+    });
+
+    const frequency = habit.frequency as HabitFrequency;
+    const scheduleDays = isHabitScheduleDays(habit.scheduleDays)
+      ? habit.scheduleDays
+      : null;
+    const details = formatHabitScheduleSummary(frequency, scheduleDays);
+    const sortOrder = await this.nextSortOrder(userId, date);
+
+    const task = await this.prisma.task.create({
+      data: {
+        userId,
+        habitId,
+        title: habit.name,
+        details,
+        date,
+        sortOrder,
+        manuallyAdded: true,
+      },
+      include: {
+        subtasks: { orderBy: { sortOrder: 'asc' } },
+        habit: {
+          include: {
+            logs: {
+              where: { completedDate: date },
+            },
+          },
+        },
+      },
+    });
+
+    return this.toTaskResponse(task, dateKey);
   }
 
   async create(userId: string, dto: CreateTaskDto) {
@@ -266,10 +436,94 @@ export class TasksService {
   }
 
   async remove(userId: string, taskId: string) {
-    const task = await this.ensureStandaloneTask(userId, taskId);
+    const task = await this.prisma.task.findUnique({ where: { id: taskId } });
+
+    if (!task) {
+      throw new NotFoundException('Task not found');
+    }
+
+    if (task.userId !== userId) {
+      throw new ForbiddenException();
+    }
+
+    if (task.habitId) {
+      throw new BadRequestException('Use untrack to remove habit tasks');
+    }
+
     this.assertDateEditable(formatDateKeyUtc(task.date));
     this.assertTaskNotCompleted(task);
     await this.prisma.task.delete({ where: { id: task.id } });
+  }
+
+  async untrackHabit(userId: string, taskId: string) {
+    const task = await this.prisma.task.findUnique({ where: { id: taskId } });
+
+    if (!task) {
+      throw new NotFoundException('Task not found');
+    }
+
+    if (task.userId !== userId) {
+      throw new ForbiddenException();
+    }
+
+    if (!task.habitId) {
+      throw new BadRequestException('Only habit tasks can be untracked');
+    }
+
+    await this.skipHabitDay(userId, task.habitId, formatDateKeyUtc(task.date));
+  }
+
+  async skipHabitDay(userId: string, habitId: string, dateKey: string) {
+    await this.ensureHabitOwnership(userId, habitId);
+    this.assertDateNotPast(dateKey);
+
+    const date = parseDateKey(dateKey);
+
+    await this.prisma.$transaction([
+      this.prisma.task.deleteMany({
+        where: { habitId, date },
+      }),
+      this.prisma.habitDaySkip.upsert({
+        where: {
+          habitId_date: {
+            habitId,
+            date,
+          },
+        },
+        create: {
+          habitId,
+          date,
+        },
+        update: {},
+      }),
+    ]);
+  }
+
+  async restoreHabitDay(userId: string, habitId: string, dateKey: string) {
+    await this.ensureHabitOwnership(userId, habitId);
+    this.assertDateNotPast(dateKey);
+
+    const date = parseDateKey(dateKey);
+
+    await this.prisma.habitDaySkip.deleteMany({
+      where: { habitId, date },
+    });
+
+    await this.syncHabitTasksForDate(userId, dateKey);
+  }
+
+  private async ensureHabitOwnership(userId: string, habitId: string) {
+    const habit = await this.prisma.habit.findUnique({ where: { id: habitId } });
+
+    if (!habit) {
+      throw new NotFoundException('Habit not found');
+    }
+
+    if (habit.userId !== userId) {
+      throw new ForbiddenException();
+    }
+
+    return habit;
   }
 
   async createSubtask(userId: string, taskId: string, dto: CreateSubtaskDto) {
@@ -465,6 +719,15 @@ export class TasksService {
 
   private async syncHabitTasksForDate(userId: string, dateKey: string) {
     const date = parseDateKey(dateKey);
+    const skippedHabits = await this.prisma.habitDaySkip.findMany({
+      where: {
+        date,
+        habit: { userId },
+      },
+      select: { habitId: true },
+    });
+    const skippedHabitIds = new Set(skippedHabits.map((skip) => skip.habitId));
+
     const habits = await this.prisma.habit.findMany({
       where: { userId, archivedAt: null },
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
@@ -476,6 +739,13 @@ export class TasksService {
     });
 
     for (const habit of habits) {
+      if (skippedHabitIds.has(habit.id)) {
+        await this.prisma.task.deleteMany({
+          where: { habitId: habit.id, date },
+        });
+        continue;
+      }
+
       if (!habit.trackingEnabled) {
         await this.prisma.task.deleteMany({
           where: { habitId: habit.id, date },
@@ -491,7 +761,7 @@ export class TasksService {
 
       if (!isHabitDueOnDate(frequency, scheduleDays, dateKey, anchorDateKey)) {
         await this.prisma.task.deleteMany({
-          where: { habitId: habit.id, date },
+          where: { habitId: habit.id, date, manuallyAdded: false },
         });
         continue;
       }
@@ -584,6 +854,7 @@ export class TasksService {
       completed,
       sortOrder: task.sortOrder,
       habitId: task.habitId,
+      manuallyAdded: task.manuallyAdded,
       subtasks,
       habit: task.habit
         ? {

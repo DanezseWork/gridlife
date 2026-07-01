@@ -97,6 +97,29 @@ export default function HabitsPage() {
     await loadHabits({ silent: true });
   }
 
+  async function handleSkipDate(habitId: string, dateKey: string) {
+    await api.skipHabitDay(habitId, dateKey);
+    await loadHabits({ silent: true });
+  }
+
+  async function handleRestoreDate(habitId: string, dateKey: string) {
+    await api.restoreHabitDay(habitId, dateKey);
+    await loadHabits({ silent: true });
+  }
+
+  async function handleTrackToday(habitId: string) {
+    const habit = habits.find((entry) => entry.id === habitId);
+    if (!habit) return;
+
+    const progress = getDayProgress(habit, todayKey);
+    if (progress.skipped && progress.scheduled) {
+      await api.restoreHabitDay(habitId, todayKey);
+    } else {
+      await api.createHabitTask({ habitId, date: todayKey });
+    }
+    await loadHabits({ silent: true });
+  }
+
   async function handleCreate(form: NewHabitForm) {
     await api.createHabit({
       name: form.name,
@@ -171,8 +194,8 @@ export default function HabitsPage() {
             {!loading && habits.length > 0 && (
               <p className="mt-0.5 text-xs opacity-50 sm:text-sm">
                 {dueTodayCount > 0
-                  ? `${completedTodayCount}/${dueTodayCount} due today`
-                  : "Nothing due today"}
+                  ? `${completedTodayCount}/${dueTodayCount} on tasks today`
+                  : "Nothing on tasks today"}
               </p>
             )}
           </div>
@@ -245,6 +268,9 @@ export default function HabitsPage() {
           if (!open) setCalendarHabit(null);
         }}
         onToggleDate={handleToggleDate}
+        onSkipDate={handleSkipDate}
+        onRestoreDate={handleRestoreDate}
+        onTrackToday={handleTrackToday}
       />
     </PageContainer>
   );

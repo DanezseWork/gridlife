@@ -17,6 +17,7 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthUser } from '../common/types/auth-user';
 import {
   CreateTaskDto,
+  CreateHabitTaskDto,
   CreateSubtaskDto,
   ReorderTasksDto,
   TaskCalendarQueryDto,
@@ -42,6 +43,19 @@ export class TasksController {
     return this.tasksService.findForDate(user.id, query.date);
   }
 
+  @Get('available-habits')
+  @ApiOperation({ summary: 'List tracked habits that can be added to a date' })
+  @ApiWrappedOkResponse('Available habits for the date', {
+    type: 'array',
+    items: { type: 'object' },
+  })
+  findAvailableHabits(
+    @CurrentUser() user: AuthUser,
+    @Query() query: TaskDateQueryDto,
+  ) {
+    return this.tasksService.findAvailableHabits(user.id, query.date);
+  }
+
   @Get('calendar')
   @ApiOperation({ summary: 'Get monthly task calendar summary' })
   @ApiWrappedOkResponse('Calendar summary for the month', {
@@ -60,6 +74,16 @@ export class TasksController {
   @ApiWrappedCreatedResponse('Created task')
   create(@CurrentUser() user: AuthUser, @Body() dto: CreateTaskDto) {
     return this.tasksService.create(user.id, dto);
+  }
+
+  @Post('habit')
+  @ApiOperation({ summary: 'Add a tracked habit to a date' })
+  @ApiWrappedCreatedResponse('Created habit task')
+  createHabitTask(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: CreateHabitTaskDto,
+  ) {
+    return this.tasksService.createHabitTask(user.id, dto.habitId, dto.date);
   }
 
   @Post('reorder')
@@ -88,6 +112,13 @@ export class TasksController {
   @ApiWrappedOkResponse('Updated task')
   toggle(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.tasksService.toggle(user.id, id);
+  }
+
+  @Post(':id/untrack')
+  @ApiOperation({ summary: 'Remove a habit from a day without pausing tracking' })
+  @ApiWrappedOkResponse('Habit untracked for the day', { type: 'null', nullable: true })
+  untrackHabit(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.tasksService.untrackHabit(user.id, id);
   }
 
   @Post(':id/transfer-to-today')

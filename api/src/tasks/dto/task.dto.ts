@@ -73,6 +73,21 @@ export class TaskCalendarQueryDto {
   month: string;
 }
 
+export class CreateHabitTaskDto {
+  @ApiProperty({ description: 'Habit to add to the day' })
+  @IsUUID('4')
+  habitId: string;
+
+  @ApiProperty({
+    description: 'Task date (YYYY-MM-DD)',
+    example: '2026-06-18',
+    pattern: '^\\d{4}-\\d{2}-\\d{2}$',
+  })
+  @IsString()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/)
+  date: string;
+}
+
 export class ReorderTasksDto {
   @ApiProperty({
     description: 'Date of the task list being reordered (YYYY-MM-DD)',

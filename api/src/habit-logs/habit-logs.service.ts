@@ -52,12 +52,22 @@ export class HabitLogsService {
       ? habit.scheduleDays
       : null;
     const anchorDateKey = habitAnchorDateKey(habit.createdAt);
+    const completedDate = parseDateKey(dateStr);
 
     if (!isHabitDueOnDate(frequency, scheduleDays, dateStr, anchorDateKey)) {
-      throw new BadRequestException('This habit is not scheduled for that day');
-    }
+      const manualTask = await this.prisma.task.findUnique({
+        where: {
+          habitId_date: {
+            habitId,
+            date: completedDate,
+          },
+        },
+      });
 
-    const completedDate = parseDateKey(dateStr);
+      if (!manualTask?.manuallyAdded) {
+        throw new BadRequestException('This habit is not scheduled for that day');
+      }
+    }
 
     const existing = await this.prisma.habitLog.findUnique({
       where: {

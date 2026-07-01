@@ -199,6 +199,8 @@ export function AddHabitDialog({
     createdAt: new Date().toISOString(),
     streak: 0,
     logs: [],
+    skippedDates: [],
+    manuallyAddedDates: [],
   };
 
   return (
@@ -384,7 +386,7 @@ export function AddHabitDialog({
               <p className="text-sm font-medium">Track this habit</p>
               <p className="text-xs opacity-50">
                 {form.trackingEnabled
-                  ? "Shows on your schedule and tasks"
+                  ? "Due days appear on Tasks · add or skip per day there"
                   : "Paused — history is kept but nothing is due"}
               </p>
             </div>

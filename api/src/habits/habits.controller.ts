@@ -13,6 +13,7 @@ import {
 } from './dto/habit.dto';
 import { HabitsService } from './habits.service';
 import { HabitLogsService } from '../habit-logs/habit-logs.service';
+import { TasksService } from '../tasks/tasks.service';
 import { ToggleHabitDto } from './dto/habit.dto';
 
 @ApiTags('habits')
@@ -22,6 +23,7 @@ export class HabitsController {
   constructor(
     private readonly habitsService: HabitsService,
     private readonly habitLogsService: HabitLogsService,
+    private readonly tasksService: TasksService,
   ) {}
 
   @Get()
@@ -79,5 +81,27 @@ export class HabitsController {
     @Body() dto: ToggleHabitDto,
   ) {
     return this.habitLogsService.toggle(user.id, id, dto.date);
+  }
+
+  @Post(':id/skip-day')
+  @ApiOperation({ summary: 'Remove a habit from a day on the task list' })
+  @ApiWrappedOkResponse('Habit skipped for the day', { type: 'null', nullable: true })
+  skipDay(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: ToggleHabitDto,
+  ) {
+    return this.tasksService.skipHabitDay(user.id, id, dto.date);
+  }
+
+  @Post(':id/restore-day')
+  @ApiOperation({ summary: 'Restore a habit to a day on the task list' })
+  @ApiWrappedOkResponse('Habit restored for the day', { type: 'null', nullable: true })
+  restoreDay(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: ToggleHabitDto,
+  ) {
+    return this.tasksService.restoreHabitDay(user.id, id, dto.date);
   }
 }

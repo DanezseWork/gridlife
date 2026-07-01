@@ -25,6 +25,8 @@ interface SortableTaskListProps {
   canToggle: (task: Task) => boolean;
   onToggle: (taskId: string) => void;
   onDelete?: (taskId: string) => void;
+  onUntrack?: (taskId: string) => void;
+  allowHabitUntrack?: boolean;
   onUpdate?: (
     taskId: string,
     data: { title: string; details?: string },
@@ -48,6 +50,8 @@ interface SortableTaskListItemProps {
   canToggle: boolean;
   onToggle: (taskId: string) => void;
   onDelete?: (taskId: string) => void;
+  onUntrack?: (taskId: string) => void;
+  allowHabitUntrack?: boolean;
   onUpdate?: (
     taskId: string,
     data: { title: string; details?: string },
@@ -70,6 +74,8 @@ function SortableTaskListItem({
   canToggle,
   onToggle,
   onDelete,
+  onUntrack,
+  allowHabitUntrack,
   onUpdate,
   onCreateSubtask,
   onToggleSubtask,
@@ -101,6 +107,8 @@ function SortableTaskListItem({
         canToggle={canToggle}
         onToggle={onToggle}
         onDelete={onDelete}
+        onUntrack={onUntrack}
+        allowHabitUntrack={allowHabitUntrack}
         onUpdate={onUpdate}
         onCreateSubtask={onCreateSubtask}
         onToggleSubtask={onToggleSubtask}
@@ -121,6 +129,8 @@ export function SortableTaskList({
   canToggle,
   onToggle,
   onDelete,
+  onUntrack,
+  allowHabitUntrack = false,
   onUpdate,
   onCreateSubtask,
   onToggleSubtask,
@@ -194,6 +204,8 @@ export function SortableTaskList({
                     canToggle={canToggle(task)}
                     onToggle={onToggle}
                     onDelete={task.habitId ? undefined : onDelete}
+                    onUntrack={onUntrack}
+                    allowHabitUntrack={allowHabitUntrack}
                     onUpdate={task.habitId ? undefined : onUpdate}
                     onCreateSubtask={onCreateSubtask}
                     onToggleSubtask={onToggleSubtask}
@@ -213,6 +225,8 @@ export function SortableTaskList({
               task={task}
               canToggle={canToggle(task)}
               onToggle={onToggle}
+              onUntrack={onUntrack}
+              allowHabitUntrack={allowHabitUntrack}
               onCreateSubtask={onCreateSubtask}
               onToggleSubtask={onToggleSubtask}
             />

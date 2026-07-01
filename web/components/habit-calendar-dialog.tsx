@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Check, ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, EyeOff, Plus } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -17,7 +17,12 @@ import {
   isLoggableHabitDateKey,
   toLocalDateKey,
 } from "@/lib/dates";
-import { getCellBackground, getDayProgress } from "@/lib/habit-progress";
+import {
+  getCellBackground,
+  getDayProgress,
+  getManualCellOutline,
+  getSkippedCellBackground,
+} from "@/lib/habit-progress";
 import { HabitFrequencyBadge } from "@/components/habit-frequency-badge";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +33,9 @@ interface HabitCalendarDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onToggleDate: (habitId: string, dateKey: string) => void;
+  onSkipDate: (habitId: string, dateKey: string) => void;
+  onRestoreDate: (habitId: string, dateKey: string) => void;
+  onTrackToday: (habitId: string) => void;
 }
 
 export function HabitCalendarDialog({
@@ -35,6 +43,9 @@ export function HabitCalendarDialog({
   open,
   onOpenChange,
   onToggleDate,
+  onSkipDate,
+  onRestoreDate,
+  onTrackToday,
 }: HabitCalendarDialogProps) {
   const todayKey = getTodayKey();
   const yesterdayKey = getYesterdayKey();
@@ -61,10 +72,79 @@ export function HabitCalendarDialog({
   );
 
   const todayProgress = habit ? getDayProgress(habit, todayKey) : null;
-  const isDueToday = todayProgress?.due ?? false;
   const isTracking = habit?.trackingEnabled ?? true;
+  const isOnTasksToday = todayProgress?.due ?? false;
 
   if (!habit) return null;
+
+  function handleDayAction(dateKey: string) {
+    const progress = getDayProgress(habit!, dateKey);
+    const isFutureOrToday = dateKey >= todayKey;
+    const canLog = isTracking && isLoggableHabitDateKey(dateKey) && progress.due;
+
+    if (canLog) {
+      onToggleDate(habit!.id, dateKey);
+      return;
+    }
+
+    if (
+      progress.skipped &&
+      progress.scheduled &&
+      isFutureOrToday &&
+      isTracking
+    ) {
+      onRestoreDate(habit!.id, dateKey);
+      return;
+    }
+
+    if (progress.due && dateKey > todayKey && isTracking) {
+      onSkipDate(habit!.id, dateKey);
+    }
+  }
+
+  function dayAriaLabel(dateKey: string, progress: ReturnType<typeof getDayProgress>) {
+    if (progress.skipped && progress.scheduled) {
+      return dateKey >= todayKey
+        ? `${dateKey} skipped — tap to restore to tasks`
+        : `${dateKey} skipped`;
+    }
+
+    if (progress.due && dateKey > todayKey) {
+      return `${dateKey} on tasks — tap to remove from that day`;
+    }
+
+    if (progress.completed) {
+      return `${dateKey} completed`;
+    }
+
+    if (progress.count > 0) {
+      return `${dateKey} ${progress.count}/${progress.targetCount}`;
+    }
+
+    if (progress.due && dateKey === todayKey) {
+      return `Log ${habit!.name} for today`;
+    }
+
+    if (progress.due && dateKey === yesterdayKey) {
+      return `Log ${habit!.name} for yesterday`;
+    }
+
+    if (progress.manuallyAdded && !progress.scheduled) {
+      return `${dateKey} manually added to tasks`;
+    }
+
+    return `${dateKey} no progress`;
+  }
+
+  function isDayInteractive(dateKey: string, progress: ReturnType<typeof getDayProgress>) {
+    if (!isTracking || dateKey < todayKey) return false;
+
+    if (progress.due && isLoggableHabitDateKey(dateKey)) return true;
+    if (progress.skipped && progress.scheduled) return true;
+    if (progress.due && dateKey > todayKey) return true;
+
+    return false;
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -82,13 +162,20 @@ export function HabitCalendarDialog({
           </DialogTitle>
           <p className="text-sm opacity-50">
             {!isTracking
-              ? "Tracking paused — turn tracking back on to log progress"
-              : habit.streak > 0
-              ? `${habit.streak} streak`
-              : habit.targetCount > 1
-                ? `${habit.targetCount} taps per session`
-                : "Tap today to log this habit"}
-            {isTracking && !isDueToday ? " · not due today" : ""}
+              ? "Tracking paused — turn tracking back on to show on tasks"
+              : todayProgress?.skipped && todayProgress.scheduled
+                ? "Skipped today — removed from today's task list"
+                : todayProgress?.due && todayProgress.manuallyAdded && !todayProgress.scheduled
+                  ? "Added to today's tasks from the Tasks page"
+                  : habit.streak > 0
+                    ? `${habit.streak} streak`
+                    : habit.targetCount > 1
+                      ? `${habit.targetCount} taps per session`
+                      : "Tracked habits appear on your Tasks page"}
+            {isTracking && todayProgress?.due && !todayProgress.skipped ? " · on tasks today" : ""}
+            {isTracking && !todayProgress?.due && todayProgress?.scheduled && !todayProgress?.skipped
+              ? " · not on tasks today"
+              : ""}
           </p>
         </DialogHeader>
 
@@ -132,41 +219,32 @@ export function HabitCalendarDialog({
               const isToday = dateKey === todayKey;
               const isYesterday = dateKey === yesterdayKey;
               const isFuture = dateKey > todayKey;
-              const canToggle =
-                isTracking && isLoggableHabitDateKey(dateKey) && progress.due;
+              const isSkipped = progress.skipped && progress.scheduled;
+              const interactive = isDayInteractive(dateKey, progress);
 
               return (
                 <button
                   key={dateKey}
                   type="button"
-                  disabled={!canToggle}
-                  aria-label={
-                    progress.completed
-                      ? `${dateKey} completed`
-                      : progress.count > 0
-                        ? `${dateKey} ${progress.count}/${progress.targetCount}`
-                        : isToday
-                          ? `Log ${habit.name} for today`
-                          : isYesterday
-                            ? `Log ${habit.name} for yesterday`
-                            : `${dateKey} no progress`
-                  }
-                  onClick={() => {
-                    if (canToggle) onToggleDate(habit.id, dateKey);
-                  }}
+                  disabled={!interactive}
+                  aria-label={dayAriaLabel(dateKey, progress)}
+                  onClick={() => handleDayAction(dateKey)}
                   className={cn(
                     "relative flex aspect-square items-center justify-center overflow-hidden rounded-lg text-sm transition-colors",
-                    canToggle && "cursor-pointer active:scale-95",
-                    !canToggle && "cursor-default",
-                    isFuture && "opacity-30",
+                    interactive && "cursor-pointer active:scale-95",
+                    !interactive && "cursor-default",
+                    isFuture && !progress.due && !isSkipped && "opacity-30",
                   )}
                   style={{
-                    background: getCellBackground(
-                      habit.color,
-                      progress.ratio,
-                      progress.due,
-                    ),
+                    background: isSkipped
+                      ? getSkippedCellBackground(habit.color)
+                      : getCellBackground(habit.color, progress.ratio, progress.due),
                     color: progress.completed ? "#fff" : "var(--color-inverse)",
+                    ...(progress.manuallyAdded &&
+                    !progress.scheduled &&
+                    isTracking
+                      ? { outline: getManualCellOutline(habit.color) }
+                      : {}),
                     ...(isToday && progress.due
                       ? { boxShadow: `0 0 0 2px ${habit.color}` }
                       : {}),
@@ -175,7 +253,7 @@ export function HabitCalendarDialog({
                           boxShadow: `0 0 0 1px color-mix(in srgb, ${habit.color} 70%, transparent)`,
                         }
                       : {}),
-                    ...(!progress.due ? { opacity: 0.35 } : {}),
+                    ...(!progress.due && !isSkipped ? { opacity: 0.35 } : {}),
                   }}
                 >
                   <span className="relative z-10">{day.getDate()}</span>
@@ -184,42 +262,79 @@ export function HabitCalendarDialog({
             })}
           </div>
 
-          <div className="flex items-center justify-center gap-2">
-            <button
-              type="button"
-              disabled={!isDueToday || !isTracking}
-              onClick={() => onToggleDate(habit.id, todayKey)}
-              className={cn(
-                "flex h-12 w-12 items-center justify-center rounded-xl border-2 transition-transform active:scale-95 disabled:opacity-35",
-              )}
-              style={{
-                background: todayProgress?.completed ? habit.color : "transparent",
-                borderColor: habit.color,
-                color: todayProgress?.completed ? "#fff" : habit.color,
-              }}
-            >
-              {todayProgress?.completed ? (
-                <Check className="h-5 w-5" strokeWidth={2.5} />
-              ) : todayProgress && todayProgress.count > 0 ? (
-                <span className="font-data text-xs font-semibold">
-                  {todayProgress.count}/{todayProgress.targetCount}
-                </span>
-              ) : (
-                <Plus className="h-5 w-5" strokeWidth={2.5} />
-              )}
-            </button>
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            {todayProgress?.due && isTracking && (
+              <button
+                type="button"
+                disabled={!todayProgress.due}
+                onClick={() => onToggleDate(habit.id, todayKey)}
+                className={cn(
+                  "flex h-12 w-12 items-center justify-center rounded-xl border-2 transition-transform active:scale-95 disabled:opacity-35",
+                )}
+                style={{
+                  background: todayProgress.completed ? habit.color : "transparent",
+                  borderColor: habit.color,
+                  color: todayProgress.completed ? "#fff" : habit.color,
+                }}
+              >
+                {todayProgress.completed ? (
+                  <Check className="h-5 w-5" strokeWidth={2.5} />
+                ) : todayProgress.count > 0 ? (
+                  <span className="font-data text-xs font-semibold">
+                    {todayProgress.count}/{todayProgress.targetCount}
+                  </span>
+                ) : (
+                  <Plus className="h-5 w-5" strokeWidth={2.5} />
+                )}
+              </button>
+            )}
+
+            {isTracking && todayProgress?.due && (
+              <button
+                type="button"
+                aria-label="Remove from today's tasks"
+                title="Remove from today's tasks"
+                onClick={() => onSkipDate(habit.id, todayKey)}
+                className="flex h-12 w-12 items-center justify-center rounded-xl border opacity-70 transition-transform hover:opacity-100 active:scale-95"
+                style={{
+                  borderColor:
+                    "color-mix(in srgb, var(--color-inverse) 20%, transparent)",
+                }}
+              >
+                <EyeOff className="h-5 w-5" />
+              </button>
+            )}
+
+            {isTracking && !isOnTasksToday && (
+              <button
+                type="button"
+                aria-label="Track today"
+                onClick={() => onTrackToday(habit.id)}
+                className="flex h-12 items-center gap-2 rounded-xl px-4 text-sm font-medium transition-transform active:scale-95"
+                style={{
+                  background: `color-mix(in srgb, ${habit.color} 16%, var(--color-base))`,
+                  border: `1px solid color-mix(in srgb, ${habit.color} 40%, transparent)`,
+                  color: habit.color,
+                }}
+              >
+                <Plus className="h-4 w-4" strokeWidth={2.5} />
+                Track today
+              </button>
+            )}
           </div>
 
           <p className="text-center text-xs opacity-50">
             {!isTracking
               ? "Tracking is paused for this habit"
-              : !isDueToday
-              ? "This habit is not scheduled for today"
-              : todayProgress?.completed
-                ? "Completed today — tap to reset"
-                : todayProgress && todayProgress.count > 0
-                  ? `${todayProgress.count}/${todayProgress.targetCount} taps — keep tapping today`
-                  : "Tap today or yesterday in the calendar to log this habit"}
+              : !isOnTasksToday
+                ? todayProgress?.skipped && todayProgress.scheduled
+                  ? "Not on today's tasks — tap Track today to add it back"
+                  : "Not on today's tasks — tap Track today to add it for today"
+                : todayProgress?.completed
+                  ? "Completed today — tap to reset"
+                  : todayProgress && todayProgress.count > 0
+                    ? `${todayProgress.count}/${todayProgress.targetCount} taps — keep tapping today`
+                    : "Tap today or yesterday to log · use Tasks to add this habit on other days"}
           </p>
         </div>
       </DialogContent>

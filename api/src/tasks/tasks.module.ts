@@ -7,5 +7,6 @@ import { TasksService } from './tasks.service';
   imports: [HabitLogsModule],
   controllers: [TasksController],
   providers: [TasksService],
+  exports: [TasksService],
 })
 export class TasksModule {}

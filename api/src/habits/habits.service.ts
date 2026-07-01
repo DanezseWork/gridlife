@@ -32,6 +32,11 @@ export class HabitsService {
         logs: {
           orderBy: { completedDate: 'desc' },
         },
+        daySkips: true,
+        tasks: {
+          where: { manuallyAdded: true },
+          select: { date: true },
+        },
       },
     });
 
@@ -55,7 +60,11 @@ export class HabitsService {
         sortOrder,
         trackingEnabled: dto.trackingEnabled ?? true,
       },
-      include: { logs: true },
+      include: {
+        logs: true,
+        daySkips: true,
+        tasks: { where: { manuallyAdded: true }, select: { date: true } },
+      },
     });
 
     return this.toHabitResponse(habit);
@@ -123,7 +132,11 @@ export class HabitsService {
           trackingEnabled: dto.trackingEnabled,
         }),
       },
-      include: { logs: true },
+      include: {
+        logs: true,
+        daySkips: true,
+        tasks: { where: { manuallyAdded: true }, select: { date: true } },
+      },
     });
 
     return this.toHabitResponse(habit);
@@ -210,6 +223,8 @@ export class HabitsService {
     trackingEnabled: boolean;
     createdAt: Date;
     logs: { id: string; completedDate: Date; count: number }[];
+    daySkips: { date: Date }[];
+    tasks: { date: Date }[];
   }) {
     const frequency = habit.frequency as HabitFrequency;
     const scheduleDays = isHabitScheduleDays(habit.scheduleDays)
@@ -241,6 +256,12 @@ export class HabitsService {
         completedDate: formatDateKeyUtc(l.completedDate),
         count: l.count,
       })),
+      skippedDates: habit.daySkips.map((skip) =>
+        formatDateKeyUtc(skip.date),
+      ),
+      manuallyAddedDates: habit.tasks.map((task) =>
+        formatDateKeyUtc(task.date),
+      ),
     };
   }
 

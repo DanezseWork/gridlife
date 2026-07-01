@@ -102,8 +102,24 @@ export default function TasksPage() {
     ]);
   }
 
+  async function handleCreateHabit(habitId: string) {
+    await api.createHabitTask({ habitId, date: selectedDate });
+    await Promise.all([
+      loadTasks(selectedDate, { silent: true }),
+      loadCalendar(viewMonth, { silent: true }),
+    ]);
+  }
+
   async function handleDelete(taskId: string) {
     await api.deleteTask(taskId);
+    await Promise.all([
+      loadTasks(selectedDate, { silent: true }),
+      loadCalendar(viewMonth, { silent: true }),
+    ]);
+  }
+
+  async function handleUntrack(taskId: string) {
+    await api.untrackHabitTask(taskId);
     await Promise.all([
       loadTasks(selectedDate, { silent: true }),
       loadCalendar(viewMonth, { silent: true }),
@@ -221,7 +237,7 @@ export default function TasksPage() {
           ) : (
             <button
               type="button"
-              aria-label="Add task"
+              aria-label="Add task or habit"
               onClick={() => setDialogOpen(true)}
               className="btn-accent flex h-10 w-10 items-center justify-center rounded-full transition-transform active:scale-95"
             >
@@ -260,6 +276,8 @@ export default function TasksPage() {
               canToggle={canToggleTask}
               onToggle={handleToggle}
               onDelete={isReadOnlyDate ? undefined : handleDelete}
+              onUntrack={!isPastDate ? handleUntrack : undefined}
+              allowHabitUntrack={!isPastDate}
               onUpdate={isReadOnlyDate ? undefined : handleUpdate}
               onCreateSubtask={isReadOnlyDate ? undefined : handleCreateSubtask}
               onToggleSubtask={isReadOnlyDate ? undefined : handleToggleSubtask}
@@ -289,7 +307,9 @@ export default function TasksPage() {
       <AddTaskDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        onCreate={handleCreate}
+        date={selectedDate}
+        onCreateTask={handleCreate}
+        onCreateHabit={handleCreateHabit}
       />
     </PageContainer>
   );
