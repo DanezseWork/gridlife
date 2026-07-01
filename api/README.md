@@ -46,8 +46,8 @@ Requires Postgres (see root `docker compose up -d`).
 |------|---------|
 | `/auth` | Login |
 | `/me` | Current user profile |
-| `/habits` | Habit CRUD, reorder, toggle logs |
-| `/tasks` | Daily tasks, calendar, subtasks |
+| `/habits` | Habit CRUD, reorder, toggle logs, skip/restore day |
+| `/tasks` | Daily tasks, calendar, subtasks, add habit, untrack, transfer |
 | `/wallets` | Wallet CRUD + computed balances |
 | `/transactions` | Transaction list + create |
 | `/planned-transactions` | Scheduled/recurring plans, queue, projection |

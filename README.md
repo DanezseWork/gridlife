@@ -21,7 +21,13 @@ Out of scope for now: multi-tenant accounts, public registration, native mobile 
 - Multi-count targets (e.g. drink water 8× per day) with tap-to-increment
 - GitHub-style contribution grid with responsive history (8–52 weeks by viewport)
 - Streak tracking and per-habit calendar history dialog
-- Toggle today’s completion from the habits page or via linked tasks
+- **Track toggle** per habit — when off, the habit is paused (history kept, nothing due or on Tasks)
+- Toggle today’s completion from the habit card, calendar dialog, or linked tasks on the Tasks page
+- **Tasks integration** — tracked habits appear on the daily task list on scheduled days
+- **Per-day controls** in the calendar dialog:
+  - **Track today** — add a habit to today’s task list (restore a skipped day or add an off-schedule day)
+  - **Skip / untrack** — remove a habit from today or a future day without pausing tracking globally
+  - Grid shows skipped days (striped) and manually added days (dashed outline)
 - Custom color and icon per habit (100 Lucide-style icons)
 
 Archived habits are hidden from the list; there is no restore UI yet.
@@ -29,10 +35,14 @@ Archived habits are hidden from the list; there is no restore UI yet.
 ### Tasks
 
 - Daily task list scoped to a selected date
-- Month calendar heatmap showing completion per day
+- Month calendar heatmap showing completion per day (includes habits and standalone tasks)
 - Standalone tasks with title, details, and subtasks
 - Create, edit, delete, and drag-and-drop reorder (incomplete tasks only)
-- Habit-linked tasks auto-generated from habit schedules
+- **Add task or habit** — the + dialog lets you create a standalone task or pick a tracked habit not already on that day
+- Habit-linked tasks auto-generated from habit schedules when tracking is on
+- **Manually added habits** — add a tracked habit to any today/future day, even when it is not scheduled
+- **Untrack habit** — remove a habit from today or a future day (eye-off); tracking stays on globally
+- **Transfer to today** — move an incomplete standalone task from yesterday to today
 - Dates older than yesterday are read-only; habit tasks can be toggled for today or yesterday
 - Parent tasks require all subtasks complete before marking done
 
@@ -103,8 +113,8 @@ All routes except `POST /auth/login` require `Authorization: Bearer <token>`. Re
 |--------|-----------|------------|
 | Auth | `/auth` | Login |
 | Users | `/me` | Profile (includes settings snapshot) |
-| Habits | `/habits` | CRUD, reorder, toggle logs |
-| Tasks | `/tasks` | Daily list, calendar, subtasks, reorder, delete |
+| Habits | `/habits` | CRUD, reorder, toggle logs, skip/restore day on task list |
+| Tasks | `/tasks` | Daily list, calendar, subtasks, reorder, add habit, untrack, transfer |
 | Wallets | `/wallets` | CRUD, computed balances |
 | Transactions | `/transactions` | List + create income/expense/transfer |
 | Planned transactions | `/planned-transactions` | Queue, projection, scheduled/recurring, deactivate |
@@ -117,8 +127,9 @@ Interactive API docs: http://localhost:3000/api/docs
 PostgreSQL via Prisma. Core entities:
 
 - **User** — root account; cascades to all owned data
-- **Habit** + **HabitLog** — habits and daily completion counts (`archivedAt` for soft delete)
-- **Task** + **Subtask** — daily tasks (optionally linked to a habit)
+- **Habit** + **HabitLog** — habits and daily completion counts (`archivedAt` for soft delete, `trackingEnabled` to pause scheduling)
+- **HabitDaySkip** — per-day opt-out from the task list without pausing tracking
+- **Task** + **Subtask** — daily tasks (optionally linked to a habit; `manuallyAdded` for off-schedule habit entries)
 - **Wallet** + **Transaction** — accounts and ledger entries
 - **PlannedTransaction** + **PlannedOccurrence** — scheduled/recurring rules and materialized occurrences
 - **UserSettings** — base color, accent color, default currency (API only for currency today)
